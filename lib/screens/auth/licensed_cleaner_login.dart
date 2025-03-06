@@ -8,7 +8,7 @@ class LicensedCleanerLoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LoginScreen(
-      userType: 'licensed_cleaner',
+      userType: 'Licensed Cleaner',
       title: 'Licensed Cleaner Login',
       subtitle: 'Access your professional account to manage cleaning services',
       onLogin: () {

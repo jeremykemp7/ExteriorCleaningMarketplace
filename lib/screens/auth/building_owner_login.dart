@@ -8,7 +8,7 @@ class BuildingOwnerLoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LoginScreen(
-      userType: 'building_owner',
+      userType: 'Building Owner',
       title: 'Building Owner Login',
       subtitle: 'Access your account to find and book cleaning services',
       onLogin: () {

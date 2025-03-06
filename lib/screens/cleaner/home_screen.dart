@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'profile_screen.dart';
+import '../../theme.dart';
 
-class CleanerHomeScreen extends StatelessWidget {
+class CleanerHomeScreen extends StatefulWidget {
   const CleanerHomeScreen({super.key});
+
+  @override
+  State<CleanerHomeScreen> createState() => _CleanerHomeScreenState();
+}
+
+class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
+  bool _isAvailable = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A192F),
+      backgroundColor: AppTheme.primaryColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -17,7 +26,7 @@ class CleanerHomeScreen extends StatelessWidget {
               height: 32,
               width: 32,
               decoration: BoxDecoration(
-                color: const Color(0xFF3CBFAE),
+                color: AppTheme.secondaryColor,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: const Icon(
@@ -27,347 +36,370 @@ class CleanerHomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'LUCID BOTS',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
               ),
             ),
           ],
         ),
         actions: [
+          // Navigation Items
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            iconSize: 28,
+            icon: const Icon(
+              Icons.calendar_today,
+              color: Colors.white,
+            ),
             onPressed: () {
-              // TODO: Implement notifications
+              // TODO: Navigate to schedule
             },
           ),
           IconButton(
-            icon: const Icon(Icons.person_outline),
+            iconSize: 28,
+            icon: const Icon(
+              Icons.message_outlined,
+              color: Colors.white,
+            ),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CleanerProfileScreen(),
-                ),
-              );
+              // TODO: Navigate to messages
             },
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status Card
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3CBFAE).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF3CBFAE).withOpacity(0.3),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3CBFAE).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.work,
-                        color: Color(0xFF3CBFAE),
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Available for Work',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Next job in 2 hours',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: true,
-                      onChanged: (value) {
-                        // TODO: Implement availability toggle
-                      },
-                      activeColor: const Color(0xFF3CBFAE),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Today's Schedule
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                "Today's Schedule",
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 200,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _buildScheduleCard(
-                    'Office Building',
-                    'Window Cleaning',
-                    '10:00 AM',
-                    Icons.window,
-                    context,
-                  ),
-                  _buildScheduleCard(
-                    'Retail Complex',
-                    'Drone Inspection',
-                    '2:00 PM',
-                    Icons.flight,
-                    context,
-                  ),
-                ],
-              ),
-            ),
-
-            // Recent Jobs
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Jobs',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      // TODO: Navigate to job history
-                    },
-                    child: const Text(
-                      'View All',
-                      style: TextStyle(
-                        color: Color(0xFF3CBFAE),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              itemCount: 3,
-              itemBuilder: (context, index) {
-                return _buildJobCard(
-                  'Job ${index + 1}',
-                  'Completed yesterday',
-                  Icons.check_circle,
-                  context,
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF1A1A1A),
-        selectedItemColor: const Color(0xFF3CBFAE),
-        unselectedItemColor: Colors.white.withOpacity(0.5),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Schedule',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.message),
-            label: 'Messages',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScheduleCard(
-    String title,
-    String service,
-    String time,
-    IconData icon,
-    BuildContext context,
-  ) {
-    return Container(
-      width: 280,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            // TODO: Navigate to job details
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // Availability Toggle in AppBar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3CBFAE).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        icon,
-                        color: const Color(0xFF3CBFAE),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      time,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
                 Text(
-                  title,
+                  _isAvailable ? 'Available' : 'Unavailable',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  service,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: _isAvailable ? AppTheme.secondaryColor : Colors.white.withOpacity(0.7),
                     fontSize: 14,
                   ),
+                ),
+                Switch(
+                  value: _isAvailable,
+                  onChanged: (value) {
+                    setState(() {
+                      _isAvailable = value;
+                    });
+                  },
+                  activeColor: AppTheme.secondaryColor,
                 ),
               ],
             ),
           ),
+          IconButton(
+            iconSize: 28,
+            icon: const Icon(
+              Icons.notifications_outlined,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              // TODO: Implement notifications
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              iconSize: 28,
+              icon: const Icon(
+                Icons.person_outline,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CleanerProfileScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(48, 0, 48, 0),
+            sliver: SliverToBoxAdapter(
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 1400),
+                  child: Column(
+                    children: [
+                      // Header Section
+                      Padding(
+                        padding: const EdgeInsets.only(top: 48, bottom: 24),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Welcome Back, ${_getTimeBasedGreeting()}',
+                              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Find and manage your cleaning jobs',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                color: Colors.white.withOpacity(0.7),
+                                fontWeight: FontWeight.normal,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Search and Filter Section
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'Search available jobs...',
+                                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                                      prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.5)),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.1),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.filter_list),
+                                    onPressed: () {
+                                      // TODO: Implement filter
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Service Categories
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          _buildCategoryChip('All Jobs', true),
+                          _buildCategoryChip('Window Cleaning', false),
+                          _buildCategoryChip('Facade Cleaning', false),
+                          _buildCategoryChip('Pressure Washing', false),
+                          _buildCategoryChip('Solar Panel Cleaning', false),
+                          _buildCategoryChip('Gutter Cleaning', false),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(48, 0, 48, 48),
+            sliver: SliverLayoutBuilder(
+              builder: (BuildContext context, SliverConstraints constraints) {
+                int crossAxisCount;
+                if (constraints.crossAxisExtent > 800) {
+                  crossAxisCount = 4;
+                } else if (constraints.crossAxisExtent > 600) {
+                  crossAxisCount = 3;
+                } else {
+                  crossAxisCount = 2;
+                }
+                return SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    mainAxisSpacing: 24,
+                    crossAxisSpacing: 24,
+                    childAspectRatio: 0.75,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildJobCard(
+                      buildingName: 'Office Tower ${index + 1}',
+                      jobType: 'Window Cleaning',
+                      price: '\$350',
+                      imageUrl: 'https://picsum.photos/400/300',
+                      distance: '3.2 miles away',
+                      scheduledTime: 'Today, 2:00 PM',
+                      status: 'Scheduled',
+                    ),
+                    childCount: 8,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(String label, bool isSelected) {
+    return FilterChip(
+      selected: isSelected,
+      label: Text(label),
+      onSelected: (bool selected) {
+        // TODO: Implement category filtering
+      },
+      backgroundColor: Colors.white.withOpacity(0.1),
+      selectedColor: const Color(0xFF3CBFAE).withOpacity(0.2),
+      labelStyle: TextStyle(
+        color: isSelected ? const Color(0xFF3CBFAE) : Colors.white.withOpacity(0.7),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isSelected ? const Color(0xFF3CBFAE) : Colors.transparent,
         ),
       ),
     );
   }
 
-  Widget _buildJobCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    BuildContext context,
-  ) {
+  Widget _buildJobCard({
+    required String buildingName,
+    required String jobType,
+    required String price,
+    required String imageUrl,
+    required String distance,
+    required String scheduledTime,
+    required String status,
+  }) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
       color: Colors.white.withOpacity(0.05),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: InkWell(
         onTap: () {
           // TODO: Navigate to job details
         },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3CBFAE).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: const Color(0xFF3CBFAE),
-                  size: 24,
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          children: [
+            // Image Section
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: AspectRatio(
+                aspectRatio: 4/3,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+            ),
+            
+            // Info Section
+            Container(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Building Name and Status
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          buildingName,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 14,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3CBFAE).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          status,
+                          style: const TextStyle(
+                            color: Color(0xFF3CBFAE),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    jobType,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 13,
                     ),
-                  ],
-                ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    scheduledTime,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    price,
+                    style: const TextStyle(
+                      color: Color(0xFF3CBFAE),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.white.withOpacity(0.5),
-                size: 16,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  String _getTimeBasedGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 17) {
+      return 'Good Afternoon';
+    } else {
+      return 'Good Evening';
+    }
   }
 } 

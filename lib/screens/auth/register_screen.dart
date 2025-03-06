@@ -1,39 +1,42 @@
 import 'package:flutter/material.dart';
-import 'register_screen.dart';
-import '../../theme.dart';
 
-class LoginScreen extends StatefulWidget {
+class RegisterScreen extends StatefulWidget {
   final String userType;
   final String title;
   final String subtitle;
   final List<Widget> additionalFields;
-  final VoidCallback onLogin;
   final VoidCallback onRegister;
+  final VoidCallback onLogin;
 
-  const LoginScreen({
+  const RegisterScreen({
     super.key,
     required this.userType,
     required this.title,
     required this.subtitle,
     this.additionalFields = const [],
-    required this.onLogin,
     required this.onRegister,
+    required this.onLogin,
   });
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -42,7 +45,14 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: AppTheme.primaryGradient,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF1A1A1A),
+              const Color(0xFF0A192F),
+            ],
+          ),
         ),
         child: SafeArea(
           child: Center(
@@ -65,8 +75,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         label: Text(
                           'Back',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: TextStyle(
                             color: Colors.white.withOpacity(0.7),
+                            fontSize: 14,
                           ),
                         ),
                         style: TextButton.styleFrom(
@@ -80,25 +91,40 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Title
                       Text(
                         widget.title,
-                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          color: Colors.white,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white.withOpacity(0.95),
                         ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         widget.subtitle,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        style: TextStyle(
+                          fontSize: 16,
                           color: Colors.white.withOpacity(0.7),
                         ),
                       ),
                       const SizedBox(height: 48),
 
-                      // Login Form
+                      // Registration Form
                       Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            _buildTextField(
+                              controller: _nameController,
+                              label: 'Full Name',
+                              icon: Icons.person_outline,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your name';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
                             _buildTextField(
                               controller: _emailController,
                               label: 'Email',
@@ -132,10 +158,37 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter your password';
+                                  return 'Please enter a password';
                                 }
                                 if (value.length < 6) {
                                   return 'Password must be at least 6 characters';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            _buildTextField(
+                              controller: _confirmPasswordController,
+                              label: 'Confirm Password',
+                              icon: Icons.lock_outline,
+                              obscureText: _obscureConfirmPassword,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                                  });
+                                },
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please confirm your password';
+                                }
+                                if (value != _passwordController.text) {
+                                  return 'Passwords do not match';
                                 }
                                 return null;
                               },
@@ -146,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ElevatedButton(
                               onPressed: () {
                                 if (_formKey.currentState!.validate()) {
-                                  widget.onLogin();
+                                  widget.onRegister();
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -158,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               child: const Text(
-                                'Login',
+                                'Create Account',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -167,41 +220,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             const SizedBox(height: 20),
                             TextButton(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  PageRouteBuilder(
-                                    pageBuilder: (context, animation, secondaryAnimation) => RegisterScreen(
-                                      userType: widget.userType,
-                                      title: 'Create ${widget.userType} Account',
-                                      subtitle: 'Join our network of ${widget.userType == 'Building Owner' ? 'building owners' : 'licensed cleaners'}',
-                                      additionalFields: widget.additionalFields,
-                                      onRegister: () {
-                                        // TODO: Implement registration logic
-                                        Navigator.pop(context);
-                                      },
-                                      onLogin: () => Navigator.pop(context),
-                                    ),
-                                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                      const begin = Offset(1.0, 0.0);
-                                      const end = Offset.zero;
-                                      const curve = Curves.easeInOutCubic;
-                                      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                                      var offsetAnimation = animation.drive(tween);
-
-                                      return SlideTransition(
-                                        position: offsetAnimation,
-                                        child: FadeTransition(
-                                          opacity: animation,
-                                          child: child,
-                                        ),
-                                      );
-                                    },
-                                    transitionDuration: const Duration(milliseconds: 600),
-                                  ),
-                                );
-                              },
+                              onPressed: widget.onLogin,
                               child: Text(
-                                'Don\'t have an account? Register',
+                                'Already have an account? Login',
                                 style: TextStyle(
                                   color: const Color(0xFF3CBFAE),
                                   fontSize: 16,

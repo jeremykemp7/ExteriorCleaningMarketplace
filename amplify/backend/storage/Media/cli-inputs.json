@@ -1,0 +1,14 @@
+{
+  "resourceName": "Media",
+  "policyUUID": "c4f40c31",
+  "bucketName": "ecm-storage-bucket",
+  "storageAccess": "auth",
+  "guestAccess": [],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "triggerFunction": "NONE",
+  "groupAccess": {}
+}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String userType;
@@ -45,14 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF1A1A1A),
-              const Color(0xFF0A192F),
-            ],
-          ),
+          gradient: AppTheme.primaryGradient,
         ),
         child: SafeArea(
           child: Center(
@@ -75,9 +69,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         label: Text(
                           'Back',
-                          style: TextStyle(
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Colors.white.withOpacity(0.7),
-                            fontSize: 14,
                           ),
                         ),
                         style: TextButton.styleFrom(
@@ -91,17 +84,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       // Title
                       Text(
                         widget.title,
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white.withOpacity(0.95),
+                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         widget.subtitle,
-                        style: TextStyle(
-                          fontSize: 16,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.white.withOpacity(0.7),
                         ),
                       ),
@@ -203,17 +193,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 }
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3CBFAE),
+                                backgroundColor: AppTheme.secondaryColor,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Create Account',
-                                style: TextStyle(
-                                  fontSize: 16,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -223,9 +213,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               onPressed: widget.onLogin,
                               child: Text(
                                 'Already have an account? Login',
-                                style: TextStyle(
-                                  color: const Color(0xFF3CBFAE),
-                                  fontSize: 16,
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: AppTheme.secondaryColor,
                                 ),
                               ),
                             ),
@@ -254,10 +243,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
-      style: const TextStyle(color: Colors.white),
+      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+        color: Colors.white,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+        labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: Colors.white.withOpacity(0.7),
+        ),
         prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
         suffixIcon: suffixIcon,
         border: OutlineInputBorder(
@@ -270,7 +263,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF3CBFAE)),
+          borderSide: BorderSide(color: AppTheme.secondaryColor),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),

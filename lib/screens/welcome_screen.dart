@@ -151,7 +151,7 @@ class WelcomeScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
-                        '© 2024 Lucid Bots. All rights reserved.',
+                        '© 2025 Lucid Bots. All rights reserved.',
                         style: Theme.of(context).textTheme.labelSmall,
                       ),
                     ),

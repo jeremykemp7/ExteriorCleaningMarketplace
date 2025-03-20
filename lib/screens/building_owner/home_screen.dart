@@ -2,9 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'profile_screen.dart';
 import '../../theme.dart';
+import '../../main.dart'; // Import for navigatorKey
+import '../../services/navigation_service.dart';
+import '../../services/auth_service.dart';
+import '../welcome_screen.dart';
 
 class BuildingOwnerHomeScreen extends StatelessWidget {
   const BuildingOwnerHomeScreen({super.key});
+
+  static void navigate() {
+    NavigationService.navigateTo(const BuildingOwnerHomeScreen());
+  }
+
+  void _handleSignOut(BuildContext context) async {
+    try {
+      await AuthService.signOut();
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      NavigationService.showErrorSnackBar('Error signing out: $e');
+    }
+  }
 
   String _getTimeBasedGreeting() {
     final hour = DateTime.now().hour;

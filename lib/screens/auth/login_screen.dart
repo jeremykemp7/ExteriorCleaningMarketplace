@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'register_screen.dart';
 import '../../theme.dart';
+
+typedef LoginCallback = Future<void> Function(String email, String password);
 
 class LoginScreen extends StatefulWidget {
   final String userType;
   final String title;
   final String subtitle;
   final List<Widget> additionalFields;
-  final VoidCallback onLogin;
+  final LoginCallback onLogin;
   final VoidCallback onRegister;
 
   const LoginScreen({
@@ -29,12 +30,121 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
+  int _loginAttempts = 0;
+  DateTime? _lastLoginAttempt;
+  static const int _maxLoginAttempts = 5;
+  static const Duration _lockoutDuration = Duration(minutes: 15);
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  bool _isLockedOut() {
+    if (_loginAttempts >= _maxLoginAttempts && _lastLoginAttempt != null) {
+      final timeSinceLastAttempt = DateTime.now().difference(_lastLoginAttempt!);
+      if (timeSinceLastAttempt < _lockoutDuration) {
+        final remainingTime = _lockoutDuration - timeSinceLastAttempt;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Too many login attempts. Please try again in ${remainingTime.inMinutes} minutes.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return true;
+      } else {
+        // Reset attempts after lockout period
+        _loginAttempts = 0;
+        _lastLoginAttempt = null;
+      }
+    }
+    return false;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your email';
+    }
+    // More comprehensive email validation
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password';
+    }
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    return null;
+  }
+
+  Future<void> _handleLogin() async {
+    if (_isLockedOut()) {
+      return;
+    }
+
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final email = _emailController.text.trim();
+        final password = _passwordController.text;
+        
+        await widget.onLogin(email, password);
+        // Reset attempts on successful login
+        _loginAttempts = 0;
+        _lastLoginAttempt = null;
+      } catch (e) {
+        _loginAttempts++;
+        _lastLoginAttempt = DateTime.now();
+        
+        String errorMessage = 'Login failed';
+        if (e.toString().contains('UserNotConfirmedException')) {
+          errorMessage = 'Email not verified. Please check your email for verification code.';
+        } else if (e.toString().contains('NotAuthorizedException')) {
+          errorMessage = 'Incorrect email or password';
+        } else if (e.toString().contains('UserNotFoundException')) {
+          errorMessage = 'No account found with this email';
+        } else if (e.toString().contains('network')) {
+          errorMessage = 'Network error. Please check your connection.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+            action: e.toString().contains('UserNotConfirmedException')
+                ? SnackBarAction(
+                    label: 'Resend Code',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      // Add resend verification code logic here
+                    },
+                  )
+                : null,
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -53,65 +163,44 @@ class _LoginScreenState extends State<LoginScreen> {
                   constraints: const BoxConstraints(maxWidth: 400),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Back Button
-                      TextButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(
-                          Icons.arrow_back,
-                          color: Colors.white.withOpacity(0.7),
-                          size: 20,
-                        ),
-                        label: Text(
-                          'Back',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.7),
+                      // Back Button Row
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+                            onPressed: () => Navigator.of(context).pop(),
                           ),
-                        ),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 0),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 40),
-                      
-                      // Title
-                      Text(
-                        widget.title,
-                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        widget.subtitle,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 48),
-
-                      // Login Form
+                      SizedBox(height: 16),
                       Form(
                         key: _formKey,
                         child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            Text(
+                              widget.title,
+                              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              widget.subtitle,
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: Colors.white.withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 48),
                             _buildTextField(
                               controller: _emailController,
                               label: 'Email',
                               icon: Icons.email_outlined,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your email';
-                                }
-                                if (!value.contains('@')) {
-                                  return 'Please enter a valid email';
-                                }
-                                return null;
-                              },
+                              enabled: !_isLoading,
+                              validator: _validateEmail,
                             ),
                             const SizedBox(height: 20),
                             _buildTextField(
@@ -119,92 +208,56 @@ class _LoginScreenState extends State<LoginScreen> {
                               label: 'Password',
                               icon: Icons.lock_outline,
                               obscureText: _obscurePassword,
+                              enabled: !_isLoading,
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword ? Icons.visibility : Icons.visibility_off,
                                   color: Colors.white.withOpacity(0.7),
                                 ),
-                                onPressed: () {
+                                onPressed: _isLoading ? null : () {
                                   setState(() {
                                     _obscurePassword = !_obscurePassword;
                                   });
                                 },
                               ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your password';
-                                }
-                                if (value.length < 6) {
-                                  return 'Password must be at least 6 characters';
-                                }
-                                return null;
-                              },
+                              validator: _validatePassword,
                             ),
                             const SizedBox(height: 20),
                             ...widget.additionalFields,
                             const SizedBox(height: 32),
                             ElevatedButton(
-                              onPressed: () {
-                                if (_formKey.currentState!.validate()) {
-                                  widget.onLogin();
-                                }
-                              },
+                              onPressed: _isLoading ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3CBFAE),
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppTheme.secondaryColor,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              child: const Text(
-                                'Login',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: _isLoading
+                                  ? SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    )
+                                  : Text(
+                                      'Login',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
                             const SizedBox(height: 20),
                             TextButton(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  PageRouteBuilder(
-                                    pageBuilder: (context, animation, secondaryAnimation) => RegisterScreen(
-                                      userType: widget.userType,
-                                      title: 'Create ${widget.userType} Account',
-                                      subtitle: 'Join our network of ${widget.userType == 'Building Owner' ? 'building owners' : 'licensed cleaners'}',
-                                      additionalFields: widget.additionalFields,
-                                      onRegister: () {
-                                        // TODO: Implement registration logic
-                                        Navigator.pop(context);
-                                      },
-                                      onLogin: () => Navigator.pop(context),
-                                    ),
-                                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                      const begin = Offset(1.0, 0.0);
-                                      const end = Offset.zero;
-                                      const curve = Curves.easeInOutCubic;
-                                      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                                      var offsetAnimation = animation.drive(tween);
-
-                                      return SlideTransition(
-                                        position: offsetAnimation,
-                                        child: FadeTransition(
-                                          opacity: animation,
-                                          child: child,
-                                        ),
-                                      );
-                                    },
-                                    transitionDuration: const Duration(milliseconds: 600),
-                                  ),
-                                );
-                              },
+                              onPressed: _isLoading ? null : widget.onRegister,
                               child: Text(
                                 'Don\'t have an account? Register',
-                                style: TextStyle(
-                                  color: const Color(0xFF3CBFAE),
-                                  fontSize: 16,
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: AppTheme.secondaryColor,
                                 ),
                               ),
                             ),
@@ -227,16 +280,22 @@ class _LoginScreenState extends State<LoginScreen> {
     required String label,
     required IconData icon,
     bool obscureText = false,
+    bool enabled = true,
     Widget? suffixIcon,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
-      style: const TextStyle(color: Colors.white),
+      enabled: enabled,
+      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+        color: Colors.white,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+        labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: Colors.white.withOpacity(0.7),
+        ),
         prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
         suffixIcon: suffixIcon,
         border: OutlineInputBorder(
@@ -249,7 +308,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF3CBFAE)),
+          borderSide: BorderSide(color: AppTheme.secondaryColor),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),

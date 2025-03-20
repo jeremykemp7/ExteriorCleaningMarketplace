@@ -9,14 +9,15 @@
       "UnauthRoleName": "amplify-ecm-dev-40f90-unauthRole",
       "StackName": "amplify-ecm-dev-40f90",
       "StackId": "arn:aws:cloudformation:us-east-1:471112543220:stack/amplify-ecm-dev-40f90/42980fc0-fb72-11ef-bd67-12cafb6e945b",
-      "AmplifyAppId": "d3jgjnxzrqdux0"
+      "AmplifyAppId": "d3jgjnxzrqdux0",
+      "AuthTriggerTemplateURL": "https://s3.amazonaws.com/amplify-ecm-dev-40f90-deployment/amplify-cfn-templates/auth/auth-trigger-cloudformation-template.json"
     },
     "categories": {
-      "auth": {
-        "ecm8ec352cd": {}
-      },
       "storage": {
         "Media": {}
+      },
+      "auth": {
+        "ecm26cad43a": {}
       }
     }
   }

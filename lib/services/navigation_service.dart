@@ -45,4 +45,16 @@ class NavigationService {
       );
     }
   }
+
+  static void pushNamed(String routeName) {
+    navigatorKey.currentState?.pushNamed(routeName);
+  }
+
+  static void pushReplacementNamed(String routeName) {
+    navigatorKey.currentState?.pushReplacementNamed(routeName);
+  }
+
+  static void pop() {
+    navigatorKey.currentState?.pop();
+  }
 } 

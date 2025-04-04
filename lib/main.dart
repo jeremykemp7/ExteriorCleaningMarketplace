@@ -1,38 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:amplify_flutter/amplify_flutter.dart';
-import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
-import 'amplifyconfiguration.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/auth/building_owner_login.dart';
 import 'screens/auth/licensed_cleaner_login.dart';
-import 'screens/auth/registration_screen.dart';
+import 'screens/auth/building_owner_register.dart';
+import 'screens/auth/licensed_cleaner_register.dart';
 import 'screens/building_owner/home_screen.dart';
 import 'screens/cleaner/home_screen.dart';
 import 'services/navigation_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await _configureAmplify();
-  } catch (e) {
-    print('Error configuring Amplify: $e');
-  }
-
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
-}
-
-Future<void> _configureAmplify() async {
-  try {
-    print('Configuring Amplify...');
-    final auth = AmplifyAuthCognito();
-    await Amplify.addPlugin(auth);
-
-    await Amplify.configure(amplifyconfig);
-    print('Successfully configured Amplify');
-  } catch (e) {
-    print('Error configuring Amplify: $e');
-  }
 }
 
 class MyApp extends StatelessWidget {
@@ -74,10 +57,10 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login/building-owner': (context) => const BuildingOwnerLoginScreen(),
         '/login/licensed-cleaner': (context) => const LicensedCleanerLoginScreen(),
-        '/register/building-owner': (context) => const RegistrationScreen(userType: 'Building Owner'),
-        '/register/licensed-cleaner': (context) => const RegistrationScreen(userType: 'Licensed Cleaner'),
+        '/register/building-owner': (context) => const BuildingOwnerRegisterScreen(),
+        '/register/cleaner': (context) => const LicensedCleanerRegisterScreen(),
         '/building-owner/home': (context) => const BuildingOwnerHomeScreen(),
-        '/licensed-cleaner/home': (context) => const CleanerHomeScreen(),
+        '/cleaner/home': (context) => const CleanerHomeScreen(),
       },
     );
   }

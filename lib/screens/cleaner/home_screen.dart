@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'profile_screen.dart';
 import '../../theme.dart';
-import '../../main.dart'; // Import for navigatorKey
 import '../../services/navigation_service.dart';
-import '../../services/auth_service.dart';
 import '../welcome_screen.dart';
 
 class CleanerHomeScreen extends StatefulWidget {
   const CleanerHomeScreen({super.key});
+
+  static void navigate() {
+    NavigationService.navigateTo(const CleanerHomeScreen());
+  }
 
   @override
   State<CleanerHomeScreen> createState() => _CleanerHomeScreenState();
@@ -17,10 +19,28 @@ class CleanerHomeScreen extends StatefulWidget {
 class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
   bool _isAvailable = true;
 
+  void _handleSignOut() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+      (route) => false,
+    );
+  }
+
+  String _getTimeBasedGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 17) {
+      return 'Good Afternoon';
+    } else {
+      return 'Good Evening';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryColor,
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -30,7 +50,7 @@ class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
               height: 32,
               width: 32,
               decoration: BoxDecoration(
-                color: AppTheme.secondaryColor,
+                color: Theme.of(context).colorScheme.secondary,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: const Icon(
@@ -79,7 +99,7 @@ class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
                 Text(
                   _isAvailable ? 'Available' : 'Unavailable',
                   style: TextStyle(
-                    color: _isAvailable ? AppTheme.secondaryColor : Colors.white.withOpacity(0.7),
+                    color: _isAvailable ? Theme.of(context).colorScheme.secondary : Colors.white.withOpacity(0.7),
                     fontSize: 14,
                   ),
                 ),
@@ -90,7 +110,7 @@ class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
                       _isAvailable = value;
                     });
                   },
-                  activeColor: AppTheme.secondaryColor,
+                  activeColor: Theme.of(context).colorScheme.secondary,
                 ),
               ],
             ),
@@ -105,24 +125,22 @@ class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
               // TODO: Implement notifications
             },
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              iconSize: 28,
-              icon: const Icon(
-                Icons.person_outline,
-                color: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CleanerProfileScreen(),
-                  ),
-                );
-              },
+          IconButton(
+            iconSize: 28,
+            icon: const Icon(
+              Icons.person_outline,
+              color: Colors.white,
             ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CleanerProfileScreen(),
+                ),
+              );
+            },
           ),
+          const SizedBox(width: 16),
         ],
       ),
       body: CustomScrollView(
@@ -394,34 +412,5 @@ class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
         ),
       ),
     );
-  }
-
-  String _getTimeBasedGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'Good Morning';
-    } else if (hour < 17) {
-      return 'Good Afternoon';
-    } else {
-      return 'Good Evening';
-    }
-  }
-
-  static void navigate() {
-    NavigationService.navigateTo(const CleanerHomeScreen());
-  }
-
-  void _handleSignOut(BuildContext context) async {
-    try {
-      await AuthService.signOut();
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      NavigationService.showErrorSnackBar('Error signing out: $e');
-    }
   }
 } 

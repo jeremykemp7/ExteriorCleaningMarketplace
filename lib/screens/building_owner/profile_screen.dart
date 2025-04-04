@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../welcome_screen.dart';
-import '../../theme.dart';
+import '../../services/auth_service.dart';
+import '../../services/navigation_service.dart';
 
 class BuildingOwnerProfileScreen extends StatefulWidget {
   const BuildingOwnerProfileScreen({super.key});
@@ -11,374 +11,317 @@ class BuildingOwnerProfileScreen extends StatefulWidget {
 
 class _BuildingOwnerProfileScreenState extends State<BuildingOwnerProfileScreen> {
   bool _isEditing = false;
+  bool _isLoading = true;
+  bool _isSaving = false;
   final _formKey = GlobalKey<FormState>();
+  final _authService = AuthService();
   
   // Controllers for editable fields
-  final _firstNameController = TextEditingController(text: 'John');
-  final _lastNameController = TextEditingController(text: 'Smith');
-  final _emailController = TextEditingController(text: 'john.smith@example.com');
-  final _phoneController = TextEditingController(text: '(555) 123-4567');
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _companyController = TextEditingController();
+  final _addressController = TextEditingController();
 
   @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final profile = await _authService.getUserProfile();
+      if (profile != null) {
+        setState(() {
+          _firstNameController.text = profile['firstName'] ?? '';
+          _lastNameController.text = profile['lastName'] ?? '';
+          _emailController.text = profile['email'] ?? '';
+          _phoneController.text = profile['phone'] ?? '';
+          _companyController.text = profile['companyName'] ?? '';
+          _addressController.text = profile['address'] ?? '';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading profile: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to load profile. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      await _authService.updateUserProfile({
+        'firstName': _firstNameController.text.trim(),
+        'lastName': _lastNameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'companyName': _companyController.text.trim(),
+        'address': _addressController.text.trim(),
+      });
+
+      if (mounted) {
+        setState(() {
+          _isEditing = false;
+          _isSaving = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error saving profile: $e');
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update profile. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleSignOut() async {
+    try {
+      await _authService.signOut();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+    } catch (e) {
+      print('Error signing out: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to sign out. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+    bool readOnly = false,
+    int? maxLines,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.white70),
+          border: const OutlineInputBorder(),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white30),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+          ),
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.05),
+        ),
+        style: const TextStyle(color: Colors.white),
+        keyboardType: keyboardType,
+        readOnly: !_isEditing || readOnly,
+        maxLines: maxLines,
+        validator: validator,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: AppTheme.primaryColor,
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
+        title: const Text('Profile'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          'Profile',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          if (!_isEditing)
-            TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _isEditing = true;
-                });
-              },
-              icon: Icon(Icons.edit, color: AppTheme.secondaryColor),
-              label: Text(
-                'Edit',
-                style: TextStyle(color: AppTheme.secondaryColor),
-              ),
-            )
-          else
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isEditing = false;
-                    });
-                  },
-                  child: Text(
-                    'Cancel',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white70,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      setState(() {
-                        _isEditing = false;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Profile updated successfully'),
-                          backgroundColor: AppTheme.secondaryColor,
-                        ),
-                      );
-                    }
-                  },
-                  child: Text(
-                    'Save',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.secondaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-        ],
       ),
-      body: SingleChildScrollView(
-        child: Center(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 800),
-            padding: const EdgeInsets.fromLTRB(48, 0, 48, 48),
+            constraints: const BoxConstraints(maxWidth: 600),
             child: Form(
               key: _formKey,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Profile Header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 48),
+                  Text(
+                    'Profile',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Profile Picture
-                        Stack(
-                          children: [
-                            Container(
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppTheme.secondaryColor,
-                                  width: 3,
-                                ),
-                              ),
-                              child: CircleAvatar(
-                                backgroundColor: Colors.white.withOpacity(0.1),
-                                child: Icon(
-                                  Icons.person,
-                                  size: 60,
-                                  color: AppTheme.secondaryColor,
-                                ),
-                              ),
-                            ),
-                            if (_isEditing)
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  height: 40,
-                                  width: 40,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.secondaryColor,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppTheme.primaryColor,
-                                      width: 3,
-                                    ),
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(
-                                      Icons.camera_alt,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    onPressed: () {
-                                      // TODO: Implement image picker
-                                    },
-                                  ),
-                                ),
-                              ),
-                          ],
+                        Text(
+                          'Personal Information',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 24),
-                        if (_isEditing) ...[
-                          _buildTextField(
-                            controller: _firstNameController,
-                            label: 'First Name',
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your first name';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          _buildTextField(
-                            controller: _lastNameController,
-                            label: 'Last Name',
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your last name';
-                              }
-                              return null;
-                            },
-                          ),
-                        ] else ...[
-                          Text(
-                            '${_firstNameController.text} ${_lastNameController.text}',
-                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        Text(
-                          'Building Owner',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.7),
-                          ),
+                        _buildTextField(
+                          controller: _firstNameController,
+                          label: 'First Name',
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your first name';
+                            }
+                            return null;
+                          },
+                        ),
+                        _buildTextField(
+                          controller: _lastNameController,
+                          label: 'Last Name',
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your last name';
+                            }
+                            return null;
+                          },
+                        ),
+                        _buildTextField(
+                          controller: _emailController,
+                          label: 'Email',
+                          readOnly: true,
+                        ),
+                        _buildTextField(
+                          controller: _phoneController,
+                          label: 'Phone',
+                          keyboardType: TextInputType.phone,
                         ),
                       ],
                     ),
                   ),
-
-                  // Profile Sections
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildSection(
-                        title: 'Contact Information',
-                        items: [
-                          if (_isEditing) ...[
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                children: [
-                                  _buildTextField(
-                                    controller: _emailController,
-                                    label: 'Email',
-                                    keyboardType: TextInputType.emailAddress,
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Please enter your email';
-                                      }
-                                      if (!value.contains('@')) {
-                                        return 'Please enter a valid email';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildTextField(
-                                    controller: _phoneController,
-                                    label: 'Phone',
-                                    keyboardType: TextInputType.phone,
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Please enter your phone number';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ] else ...[
-                            _buildInfoItem(
-                              'Email',
-                              _emailController.text,
-                              Icons.email_outlined,
-                            ),
-                            _buildInfoItem(
-                              'Phone',
-                              _phoneController.text,
-                              Icons.phone_outlined,
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      _buildSection(
-                        title: 'Properties',
-                        items: [
-                          _buildPropertyItem(
-                            'Office Building',
-                            '123 Business Ave',
-                            Icons.business,
-                          ),
-                          _buildPropertyItem(
-                            'Retail Complex',
-                            '456 Commerce St',
-                            Icons.storefront,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      _buildSection(
-                        title: 'Account Settings',
-                        items: [
-                          _buildSettingItem(
-                            'Security',
-                            Icons.security,
-                            onTap: () {
-                              // TODO: Navigate to security
-                            },
-                          ),
-                          _buildSettingItem(
-                            'Notifications',
-                            Icons.notifications_outlined,
-                            onTap: () {
-                              // TODO: Navigate to notifications
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 48),
-                      // Logout Button
-                      Center(
-                        child: TextButton.icon(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                backgroundColor: AppTheme.primaryColor,
-                                title: Text(
-                                  'Logout',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                content: Text(
-                                  'Are you sure you want to logout?',
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: Colors.white.withOpacity(0.7),
-                                  ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context); // Close dialog
-                                    },
-                                    child: Text(
-                                      'Cancel',
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                        color: Colors.white.withOpacity(0.7),
-                                      ),
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        PageRouteBuilder(
-                                          pageBuilder: (context, animation, secondaryAnimation) => const WelcomeScreen(),
-                                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                            const begin = Offset(-1.0, 0.0);
-                                            const end = Offset.zero;
-                                            const curve = Curves.easeInOutCubic;
-                                            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                                            var offsetAnimation = animation.drive(tween);
-                                            return SlideTransition(
-                                              position: offsetAnimation,
-                                              child: child,
-                                            );
-                                          },
-                                          transitionDuration: const Duration(milliseconds: 500),
-                                        ),
-                                        (route) => false,
-                                      );
-                                    },
-                                    child: Text(
-                                      'Logout',
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                          icon: Icon(
-                            Icons.logout,
-                            color: Colors.red.shade400,
-                          ),
-                          label: Text(
-                            'Logout',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Colors.red.shade400,
-                            ),
+                  const SizedBox(height: 24),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Company Information',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
+                        const SizedBox(height: 24),
+                        _buildTextField(
+                          controller: _companyController,
+                          label: 'Company Name',
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your company name';
+                            }
+                            return null;
+                          },
+                        ),
+                        _buildTextField(
+                          controller: _addressController,
+                          label: 'Address',
+                          maxLines: 3,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your address';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  if (_isEditing)
+                    ElevatedButton(
+                      onPressed: _isSaving ? null : _saveProfile,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ],
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Save Changes'),
+                    ),
+                  if (!_isEditing)
+                    OutlinedButton(
+                      onPressed: () => setState(() => _isEditing = true),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Edit Profile'),
+                    ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: _handleSignOut,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('Sign Out'),
                   ),
                 ],
               ),
@@ -389,223 +332,14 @@ class _BuildingOwnerProfileScreenState extends State<BuildingOwnerProfileScreen>
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-        color: Colors.white,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          color: Colors.white.withOpacity(0.7),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.3),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppTheme.secondaryColor,
-          ),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Colors.red.shade300,
-          ),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Colors.red.shade300,
-          ),
-        ),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
-      ),
-      validator: validator,
-    );
-  }
-
-  Widget _buildInfoItem(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withOpacity(0.1),
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: AppTheme.iconBoxDecoration,
-            child: Icon(
-              icon,
-              color: AppTheme.secondaryColor,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.7),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSection({
-    required String title,
-    required List<Widget> items,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.white.withOpacity(0.9),
-            ),
-          ),
-        ),
-        Container(
-          decoration: AppTheme.cardDecoration,
-          child: Column(
-            children: items,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPropertyItem(String name, String address, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withOpacity(0.1),
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: AppTheme.iconBoxDecoration,
-            child: Icon(
-              icon,
-              color: AppTheme.secondaryColor,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  address,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            color: Colors.white.withOpacity(0.5),
-            size: 16,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingItem(
-    String title,
-    IconData icon, {
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: Colors.white.withOpacity(0.1),
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: AppTheme.iconBoxDecoration,
-              child: Icon(
-                icon,
-                color: AppTheme.secondaryColor,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.white.withOpacity(0.9),
-                ),
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.5),
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _companyController.dispose();
+    _addressController.dispose();
+    super.dispose();
   }
 } 

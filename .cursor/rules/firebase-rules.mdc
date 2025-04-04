@@ -1,0 +1,194 @@
+---
+description: Firebase Rules
+globs: 
+alwaysApply: false
+---
+
+
+# 🚀 Cursor Rules for Exterior Cleaning Marketplace
+
+## 🔹 General Project Structure
+- **Follow this folder structure:**
+  - `lib/`
+    - `main.dart` → App entry point and Firebase initialization
+    - `theme.dart` → Global styles (colors, fonts, button styles)
+    - `screens/` → All UI screens
+    - `widgets/` → Reusable UI components
+    - `services/` → API integration and backend logic (Firebase)
+    - `models/` → Data models for handling users, jobs, and reviews
+    - `utils/` → Helper functions and constants
+- **All Firebase logic must be inside `services/` and must NOT be mixed with UI code.**
+- **Each screen must have its own Dart file inside `screens/`.**
+
+---
+
+## 🔹 Firebase Authentication
+- **Firebase Auth must be used for authentication and role-based access control.**
+- **User roles (`Building Owner`, `Licensed Cleaner`, `Admin`) must be stored in Firestore user document.**
+- **Redirect users to the correct dashboard after login based on role.**
+- **Email verification must be enabled for all accounts.**
+- **All authentication logic must be in `services/firebase_auth_service.dart`.**
+- **Use Google Sign-In as an optional authentication method.**
+- ❌ **Do NOT mix authentication logic inside UI screens.**
+
+---
+
+## 🔹 Cloud Firestore for Data Storage
+- **Firestore must store:**
+  - User profiles (Licensed Cleaners, Building Owners, Admins)
+  - Job listings & bidding data
+  - Reviews & ratings
+- **Collection Structure:**
+  ```
+  users/
+    {userId}/
+      profile: {...}
+      settings: {...}
+  
+  jobs/
+    {jobId}/
+      details: {...}
+      bids/
+        {bidId}: {...}
+  
+  reviews/
+    {reviewId}/
+      details: {...}
+  ```
+- **All database operations must go through `services/firestore_service.dart`.**
+- **Use transactions for operations that update multiple documents.**
+- ❌ **Do NOT make direct Firestore calls inside UI screens.**
+
+---
+
+## 🔹 Firebase Storage Rules
+- **Use Firebase Storage for:**
+  - Profile pictures
+  - Job documentation
+  - Cleaning verification photos
+- **Storage Rules:**
+  ```
+  rules_version = '2';
+  service firebase.storage {
+    match /b/{bucket}/o {
+      match /users/{userId}/{allPaths=**} {
+        allow read: if request.auth != null;
+        allow write: if request.auth.uid == userId;
+      }
+      match /jobs/{jobId}/{allPaths=**} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null 
+          && (resource == null || resource.metadata.ownerId == request.auth.uid);
+      }
+    }
+  }
+  ```
+- **All storage operations must go through `services/storage_service.dart`.**
+
+---
+
+## 🔹 Firestore Security Rules
+- **Implement these base security rules:**
+  ```
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /users/{userId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth.uid == userId;
+      }
+      match /jobs/{jobId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null 
+          && request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null 
+          && (resource.data.ownerId == request.auth.uid 
+          || request.resource.data.assignedTo == request.auth.uid);
+      }
+      match /reviews/{reviewId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null 
+          && request.resource.data.authorId == request.auth.uid;
+      }
+    }
+  }
+  ```
+- **All rules must be tested before deployment.**
+
+---
+
+## 🔹 UI & Theming Rules
+- **Global styles must be defined in `theme.dart`.**
+- **Use only these brand fonts:**
+  - **Headings:** Oswald
+  - **Subheadings:** Roboto
+  - **Body Text:** Arial
+- **Primary Colors (from Lucid Bots' Brand Guide):**
+  - `Dark Blue (#142933)` - Primary
+  - `Cyan (#23C0D8)` - Secondary
+  - `Yellow (#FFD700)` - Accent
+- **All buttons must follow the standard styling in `widgets/custom_button.dart`.**
+- **Spacing should follow multiples of `8px` for margins and paddings.**
+- ❌ **Do NOT use hardcoded colors or font sizes inside UI files.**
+
+---
+
+## 🔹 Marketplace Functionality Rules
+- **Users must be able to:**
+  - Post job listings (Building Owners)
+  - Submit bids (Licensed Cleaners)
+  - Accept bids & finalize jobs
+  - Leave ratings & reviews
+- **Job listings must use Firestore pagination with `limit()` and `startAfter()`.**
+- **Use Firestore queries for filtering by location, price, and ratings.**
+- **All business logic must be handled in `services/marketplace_service.dart`.**
+- **Use Firestore transactions for bid acceptance to prevent race conditions.**
+- ❌ **Do NOT allow duplicate job postings from the same user.**
+
+---
+
+## 🔹 Messaging & Notifications
+- **Use Firebase Cloud Messaging (FCM) for push notifications.**
+- **Store messages in Firestore under a `messages` collection.**
+- **Use Cloud Functions to trigger notifications on:**
+  - New bids
+  - Bid acceptance
+  - Job completion
+  - New messages
+- **All messaging logic must be inside `services/messaging_service.dart`.**
+- **Store FCM tokens in user documents for targeted notifications.**
+- ❌ **Do NOT store sensitive user data inside messages.**
+
+---
+
+## 🔹 Firebase Cloud Functions
+- **Implement Cloud Functions for:**
+  - User cleanup on account deletion
+  - Notification dispatch
+  - Job status updates
+  - Review aggregation
+- **All Cloud Functions must be in TypeScript.**
+- **Use proper error handling and logging.**
+- **Follow the principle of least privilege for service account permissions.**
+
+---
+
+## 🔹 Security & Deployment Best Practices
+- **Firebase Hosting must be used for web deployment.**
+- **Use Firebase App Check to prevent API abuse.**
+- **Enable Firebase Authentication email verification.**
+- **Log all critical operations using Firebase Analytics.**
+- **Use Firebase Performance Monitoring for tracking app performance.**
+- **Before deployment:**
+  - Test all security rules
+  - Verify Cloud Functions
+  - Check Firebase configuration
+- ❌ **Do NOT commit Firebase config files with sensitive data.**
+
+---
+
+# ✅ Final Notes
+- **Ensure all rules are followed before merging any PR.**
+- **Test security rules thoroughly using the Firebase Emulator Suite.**
+- **Maintain consistency in collection and document naming.**
+- **Follow Firebase best practices for data structure and queries.**

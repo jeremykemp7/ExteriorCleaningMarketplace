@@ -1,98 +1,184 @@
-import 'package:amplify_flutter/amplify_flutter.dart';
-import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
-import '../screens/cleaner/home_screen.dart';
-import '../screens/building_owner/home_screen.dart';
-import 'navigation_service.dart';
-import '../screens/auth/verification_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
-  static Future<bool> signIn(String email, String password) async {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Sign up with email and password
+  Future<UserCredential> signUp({
+    required String email,
+    required String password,
+    required String userType,
+    required String firstName,
+    required String lastName,
+  }) async {
     try {
-      final result = await Amplify.Auth.signIn(
-        username: email,
+      print('Creating user with email and password...'); // Debug log
+      // Create user with email and password
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
         password: password,
       );
-      
-      return result.isSignedIn;
+
+      print('Sending email verification...'); // Debug log
+      // Send email verification
+      await userCredential.user!.sendEmailVerification();
+
+      print('Creating user profile in Firestore...'); // Debug log
+      // Create user profile in Firestore
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'email': email,
+        'firstName': firstName,
+        'lastName': lastName,
+        'userType': userType,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'emailVerified': false,
+      });
+
+      print('User created successfully'); // Debug log
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      print('Firebase Auth Error during signup: ${e.code} - ${e.message}'); // Debug log
+      throw _handleAuthError(e);
     } catch (e) {
-      print('Error signing in: $e');
-      return false;
+      print('Unexpected error during signup: $e'); // Debug log
+      throw e.toString();
     }
   }
 
-  static Future<SignUpResult?> signUp(String email, String password) async {
+  // Sign in with email and password
+  Future<UserCredential> signIn({
+    required String email,
+    required String password,
+  }) async {
     try {
-      print('Starting sign up process for email: $email');
-      final userAttributes = {
-        CognitoUserAttributeKey.email: email,
-      };
-      
-      print('Attempting to sign up with Amplify...');
-      final result = await Amplify.Auth.signUp(
-        username: email,
+      print('AuthService: Attempting sign in for $email'); // Debug log
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
         password: password,
-        options: SignUpOptions(
-          userAttributes: userAttributes,
-        ),
       );
-      
-      print('Sign up result: ${result.isSignUpComplete}');
-      print('Next step: ${result.nextStep.signUpStep}');
-      return result;
-    } on AuthException catch (e) {
-      print('AuthException during sign up: ${e.message}');
-      print('Auth Exception details: ${e.recoverySuggestion}');
+
+      print('AuthService: Initial sign in successful'); // Debug log
+
+      // Reload user to get latest verification status
+      print('AuthService: Reloading user to get latest status'); // Debug log
+      await userCredential.user!.reload();
+      final user = _auth.currentUser;
+
+      print('AuthService: User email verified: ${user?.emailVerified}'); // Debug log
+
+      // Check if email is verified
+      if (user == null || !user.emailVerified) {
+        print('AuthService: Email not verified, throwing exception'); // Debug log
+        throw CustomAuthException(
+          'Please verify your email before signing in. Check your inbox for the verification link.',
+        );
+      }
+
+      // Update user profile in Firestore
+      await _firestore.collection('users').doc(user.uid).update({
+        'lastSignInTime': FieldValue.serverTimestamp(),
+        'emailVerified': user.emailVerified,
+      });
+
+      print('AuthService: Sign in process complete'); // Debug log
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      print('AuthService: Firebase Auth Error - ${e.code}: ${e.message}'); // Debug log
+      throw _handleAuthError(e);
+    } catch (e) {
+      print('AuthService: Unexpected Error - $e'); // Debug log
+      throw e.toString();
+    }
+  }
+
+  // Get user profile data
+  Future<Map<String, dynamic>?> getUserProfile() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      return doc.data();
+    } catch (e) {
+      print('Error getting user profile: $e');
       return null;
-    } catch (e) {
-      print('General error during sign up: $e');
-      return null;
     }
   }
 
-  static Future<bool> confirmSignUp(String email, String confirmationCode) async {
+  // Update user profile
+  Future<void> updateUserProfile(Map<String, dynamic> data) async {
     try {
-      final result = await Amplify.Auth.confirmSignUp(
-        username: email,
-        confirmationCode: confirmationCode,
-      );
-      return result.isSignUpComplete;
+      final user = _auth.currentUser;
+      if (user == null) throw 'No user logged in';
+
+      await _firestore.collection('users').doc(user.uid).update({
+        ...data,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
-      print('Error confirming sign up: $e');
-      return false;
+      print('Error updating user profile: $e');
+      throw 'Failed to update profile';
     }
   }
 
-  static Future<void> resetPassword(String email) async {
+  // Resend verification email
+  Future<void> resendVerificationEmail() async {
     try {
-      await Amplify.Auth.resetPassword(
-        username: email,
-      );
-      NavigationService.showSuccessSnackBar('Password reset instructions sent to your email');
-    } catch (e) {
-      NavigationService.showErrorSnackBar('Error resetting password: ${e.toString()}');
-      rethrow;
+      await _auth.currentUser?.sendEmailVerification();
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthError(e);
     }
   }
 
-  static Future<bool> confirmResetPassword(String email, String code, String newPassword) async {
+  // Sign out
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
+
+  // Reset password
+  Future<void> resetPassword(String email) async {
     try {
-      final result = await Amplify.Auth.confirmResetPassword(
-        username: email,
-        newPassword: newPassword,
-        confirmationCode: code,
-      );
-      return result.isPasswordReset;
-    } catch (e) {
-      print('Error confirming password reset: $e');
-      rethrow;
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthError(e);
     }
   }
 
-  static Future<void> signOut() async {
-    try {
-      await Amplify.Auth.signOut();
-    } catch (e) {
-      NavigationService.showErrorSnackBar('Error signing out: ${e.toString()}');
+  // Get current user
+  User? get currentUser => _auth.currentUser;
+
+  // Handle Firebase Auth errors
+  String _handleAuthError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'An account already exists with this email.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'operation-not-allowed':
+        return 'Email/password accounts are not enabled. Please contact support.';
+      case 'weak-password':
+        return 'Please enter a stronger password.';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'user-not-found':
+        return 'No account found with this email.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      default:
+        return 'An error occurred. Please try again.';
     }
   }
+}
+
+class CustomAuthException implements Exception {
+  final String message;
+  CustomAuthException(this.message);
+
+  @override
+  String toString() => message;
 } 

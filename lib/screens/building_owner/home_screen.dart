@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'profile_screen.dart';
 import '../../theme.dart';
-import '../../main.dart'; // Import for navigatorKey
 import '../../services/navigation_service.dart';
-import '../../services/auth_service.dart';
 import '../welcome_screen.dart';
 
 class BuildingOwnerHomeScreen extends StatelessWidget {
@@ -12,20 +10,6 @@ class BuildingOwnerHomeScreen extends StatelessWidget {
 
   static void navigate() {
     NavigationService.navigateTo(const BuildingOwnerHomeScreen());
-  }
-
-  void _handleSignOut(BuildContext context) async {
-    try {
-      await AuthService.signOut();
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      NavigationService.showErrorSnackBar('Error signing out: $e');
-    }
   }
 
   String _getTimeBasedGreeting() {
@@ -39,10 +23,29 @@ class BuildingOwnerHomeScreen extends StatelessWidget {
     }
   }
 
+  Widget _buildCategoryChip(String label, bool isSelected, BuildContext context) {
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        // TODO: Implement category filtering
+      },
+      backgroundColor: Colors.white.withOpacity(0.1),
+      selectedColor: Theme.of(context).colorScheme.primary,
+      checkmarkColor: Colors.white,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryColor,
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -52,7 +55,7 @@ class BuildingOwnerHomeScreen extends StatelessWidget {
               height: 32,
               width: 32,
               decoration: BoxDecoration(
-                color: AppTheme.secondaryColor,
+                color: Theme.of(context).colorScheme.secondary,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: const Icon(
@@ -82,24 +85,22 @@ class BuildingOwnerHomeScreen extends StatelessWidget {
               // TODO: Implement notifications
             },
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              iconSize: 28,
-              icon: const Icon(
-                Icons.person_outline,
-                color: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BuildingOwnerProfileScreen(),
-                  ),
-                );
-              },
+          IconButton(
+            iconSize: 28,
+            icon: const Icon(
+              Icons.person_outline,
+              color: Colors.white,
             ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BuildingOwnerProfileScreen(),
+                ),
+              );
+            },
           ),
+          const SizedBox(width: 16),
         ],
       ),
       body: CustomScrollView(
@@ -186,12 +187,12 @@ class BuildingOwnerHomeScreen extends StatelessWidget {
                         spacing: 12,
                         runSpacing: 12,
                         children: [
-                          _buildCategoryChip('All Services', true),
-                          _buildCategoryChip('Window Cleaning', false),
-                          _buildCategoryChip('Facade Cleaning', false),
-                          _buildCategoryChip('Pressure Washing', false),
-                          _buildCategoryChip('Solar Panel Cleaning', false),
-                          _buildCategoryChip('Gutter Cleaning', false),
+                          _buildCategoryChip('All Services', true, context),
+                          _buildCategoryChip('Window Cleaning', false, context),
+                          _buildCategoryChip('Facade Cleaning', false, context),
+                          _buildCategoryChip('Pressure Washing', false, context),
+                          _buildCategoryChip('Solar Panel Cleaning', false, context),
+                          _buildCategoryChip('Gutter Cleaning', false, context),
                         ],
                       ),
                       const SizedBox(height: 32),
@@ -238,27 +239,6 @@ class BuildingOwnerHomeScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip(String label, bool isSelected) {
-    return FilterChip(
-      selected: isSelected,
-      label: Text(label),
-      onSelected: (bool selected) {
-        // TODO: Implement category filtering
-      },
-      backgroundColor: Colors.white.withOpacity(0.1),
-      selectedColor: const Color(0xFF3CBFAE).withOpacity(0.2),
-      labelStyle: TextStyle(
-        color: isSelected ? const Color(0xFF3CBFAE) : Colors.white.withOpacity(0.7),
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? const Color(0xFF3CBFAE) : Colors.transparent,
-        ),
       ),
     );
   }

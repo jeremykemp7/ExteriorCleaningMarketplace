@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/navigation_service.dart';
+import '../../widgets/password_field.dart';
+import 'login_screen.dart';
+import '../cleaner/home_screen.dart';
+import 'reset_password_screen.dart';
 
 class LicensedCleanerLoginScreen extends StatefulWidget {
   const LicensedCleanerLoginScreen({super.key});
@@ -165,6 +169,7 @@ class _LicensedCleanerLoginScreenState extends State<LicensedCleanerLoginScreen>
                           decoration: const InputDecoration(
                             labelText: 'Email',
                             border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.email_outlined),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
@@ -178,13 +183,10 @@ class _LicensedCleanerLoginScreenState extends State<LicensedCleanerLoginScreen>
                           },
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        PasswordField(
                           controller: _passwordController,
-                          decoration: const InputDecoration(
-                            labelText: 'Password',
-                            border: OutlineInputBorder(),
-                          ),
-                          obscureText: true,
+                          label: 'Password',
+                          enabled: !_isLoading,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your password';

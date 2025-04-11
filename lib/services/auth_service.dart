@@ -35,6 +35,7 @@ class AuthService {
         'createdAt': FieldValue.serverTimestamp(),
         'lastUpdated': FieldValue.serverTimestamp(),
         'emailVerified': false,
+        'profileImageUrl': null,  // Initialize profile image URL as null
       });
 
       print('User created successfully'); // Debug log
@@ -98,10 +99,16 @@ class AuthService {
   Future<Map<String, dynamic>?> getUserProfile() async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return null;
+      if (user == null) {
+        print('getUserProfile: No user logged in');
+        return null;
+      }
 
       final doc = await _firestore.collection('users').doc(user.uid).get();
-      return doc.data();
+      final data = doc.data();
+      print('getUserProfile: Retrieved data: $data');
+      print('getUserProfile: Profile image URL: ${data?['profileImageUrl']}');
+      return data;
     } catch (e) {
       print('Error getting user profile: $e');
       return null;

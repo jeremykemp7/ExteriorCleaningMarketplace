@@ -1,0 +1,12 @@
+[
+  {
+    "origin": [
+      "http://localhost:*",
+      "https://exterior-cleaning-marketplace.web.app",
+      "https://exterior-cleaning-marketplace.firebaseapp.com"
+    ],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type"]
+  }
+] 

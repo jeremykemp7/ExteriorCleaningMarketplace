@@ -1,15 +1,112 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'profile_screen.dart';
 import '../../theme.dart';
 import '../../services/navigation_service.dart';
+import '../../services/auth_service.dart';
 import '../welcome_screen.dart';
+import 'add_property_screen.dart';
 
-class BuildingOwnerHomeScreen extends StatelessWidget {
+class BuildingOwnerHomeScreen extends StatefulWidget {
   const BuildingOwnerHomeScreen({super.key});
 
   static void navigate() {
     NavigationService.navigateTo(const BuildingOwnerHomeScreen());
+  }
+
+  @override
+  State<BuildingOwnerHomeScreen> createState() => _BuildingOwnerHomeScreenState();
+}
+
+class _BuildingOwnerHomeScreenState extends State<BuildingOwnerHomeScreen> {
+  final _authService = AuthService();
+  final _firestore = FirebaseFirestore.instance;
+  String? _firstName;
+  bool _isLoadingProfile = true;
+  Stream<QuerySnapshot>? _propertiesStream;
+  int _activeListings = 0;
+  int _totalViews = 0;
+  int _totalApplications = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+    _setupPropertiesStream();
+  }
+
+  void _setupPropertiesStream() {
+    final userId = _authService.currentUser?.uid;
+    if (userId != null) {
+      _propertiesStream = _firestore
+          .collection('properties')
+          .where('ownerId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .snapshots();
+    }
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final profile = await _authService.getUserProfile();
+      if (profile != null && mounted) {
+        setState(() {
+          _firstName = profile['firstName'];
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading user profile: $e');
+      if (mounted) {
+        setState(() => _isLoadingProfile = false);
+      }
+    }
+  }
+
+  Future<void> _deleteProperty(String propertyId) async {
+    try {
+      await _firestore.collection('properties').doc(propertyId).delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Property deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting property: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showDeleteConfirmation(String propertyId, String propertyName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Property'),
+        content: Text('Are you sure you want to delete "$propertyName"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteProperty(propertyId);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getTimeBasedGreeting() {
@@ -23,22 +120,194 @@ class BuildingOwnerHomeScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildCategoryChip(String label, bool isSelected, BuildContext context) {
-    return FilterChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.home_work_outlined,
+            size: 64,
+            color: Colors.white.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Properties Listed',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add your first property to get started',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Colors.white.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AddPropertyScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add Property'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              textStyle: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ],
       ),
-      selected: isSelected,
-      onSelected: (bool selected) {
-        // TODO: Implement category filtering
-      },
-      backgroundColor: Colors.white.withOpacity(0.1),
-      selectedColor: Theme.of(context).colorScheme.primary,
-      checkmarkColor: Colors.white,
+    );
+  }
+
+  Widget _buildPropertyCard(DocumentSnapshot document) {
+    final data = document.data() as Map<String, dynamic>;
+    final name = data['name'] as String;
+    final address = data['address'] as String;
+    final status = data['status'] as String;
+    final price = (data['price'] as num).toDouble();
+    final images = List<String>.from(data['images'] ?? []);
+    final views = data['views'] as int;
+    final applications = (data['applications'] as List? ?? []).length;
+    final imageUrl = images.isNotEmpty ? images[0] : 'https://picsum.photos/400/300';
+
+    Color statusColor;
+    switch (status.toLowerCase()) {
+      case 'available':
+        statusColor = Colors.green;
+        break;
+      case 'pending':
+        statusColor = Colors.orange;
+        break;
+      case 'accepted':
+        statusColor = Colors.blue;
+        break;
+      default:
+        statusColor = Colors.grey;
+    }
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                child: Image.network(
+                  imageUrl,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  address,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '\$${price.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.visibility_outlined, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text('$views views'),
+                    const SizedBox(width: 16),
+                    Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text('$applications applications'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          ButtonBar(
+            alignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () {
+                  _showDeleteConfirmation(document.id, name);
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+                child: const Text('Delete'),
+              ),
+              TextButton(
+                onPressed: () {
+                  // TODO: Implement edit property
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddPropertyScreen(
+                        propertyId: document.id,
+                        initialData: data,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Edit'),
+              ),
+              TextButton(
+                onPressed: () {
+                  // TODO: Implement view applications screen
+                },
+                child: Text('Applications ($applications)'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -76,21 +345,20 @@ class BuildingOwnerHomeScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            iconSize: 28,
-            icon: const Icon(
-              Icons.notifications_outlined,
-              color: Colors.white,
-            ),
+            icon: const Icon(Icons.analytics_outlined),
+            onPressed: () {
+              // TODO: Navigate to market research screen
+            },
+            tooltip: 'Market Research',
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
               // TODO: Implement notifications
             },
           ),
           IconButton(
-            iconSize: 28,
-            icon: const Icon(
-              Icons.person_outline,
-              color: Colors.white,
-            ),
+            icon: const Icon(Icons.person_outline),
             onPressed: () {
               Navigator.push(
                 context,
@@ -103,254 +371,185 @@ class BuildingOwnerHomeScreen extends StatelessWidget {
           const SizedBox(width: 16),
         ],
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(48, 0, 48, 0),
-            sliver: SliverToBoxAdapter(
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 1400),
-                  child: Column(
-                    children: [
-                      // Header Section
-                      Padding(
-                        padding: const EdgeInsets.only(top: 48, bottom: 24),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Welcome Back, ${_getTimeBasedGreeting()}',
-                              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Find Your Perfect Cleaning Service',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: Colors.white.withOpacity(0.7),
-                                fontWeight: FontWeight.normal,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _propertiesStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Error: ${snapshot.error}',
+                style: const TextStyle(color: Colors.white),
+              ),
+            );
+          }
 
-                      // Search and Filter Section
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 32),
-                        child: Center(
-                          child: Container(
-                            constraints: const BoxConstraints(maxWidth: 800),
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final properties = snapshot.data?.docs ?? [];
+          
+          if (properties.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          // Update stats
+          _activeListings = properties.length;
+          _totalViews = properties.fold(0, (sum, doc) => sum + (doc.data() as Map<String, dynamic>)['views'] as int);
+          _totalApplications = properties.fold(0, (sum, doc) => sum + ((doc.data() as Map<String, dynamic>)['applications'] as List? ?? []).length);
+
+          return CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(48, 0, 48, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 1400),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 48, bottom: 24),
                             child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(
-                                  child: TextField(
-                                    decoration: InputDecoration(
-                                      hintText: 'Search cleaning services...',
-                                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-                                      prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.5)),
-                                      filled: true,
-                                      fillColor: Colors.white.withOpacity(0.1),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide.none,
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _isLoadingProfile
+                                          ? _getTimeBasedGreeting()
+                                          : '${_getTimeBasedGreeting()}${_firstName != null ? ', $_firstName' : ''}',
+                                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Manage Your Properties',
+                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                        color: Colors.white.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 16),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const AddPropertyScreen(),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.add,
+                                    size: 24,
                                   ),
-                                  child: IconButton(
-                                    icon: const Icon(Icons.filter_list),
-                                    onPressed: () {
-                                      // TODO: Implement filter
-                                    },
+                                  label: const Text(
+                                    'Add Property',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                    elevation: 4,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ),
-
-                      // Service Categories
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          _buildCategoryChip('All Services', true, context),
-                          _buildCategoryChip('Window Cleaning', false, context),
-                          _buildCategoryChip('Facade Cleaning', false, context),
-                          _buildCategoryChip('Pressure Washing', false, context),
-                          _buildCategoryChip('Solar Panel Cleaning', false, context),
-                          _buildCategoryChip('Gutter Cleaning', false, context),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(48, 0, 48, 48),
-            sliver: SliverLayoutBuilder(
-              builder: (BuildContext context, SliverConstraints constraints) {
-                int crossAxisCount;
-                if (constraints.crossAxisExtent > 800) {
-                  crossAxisCount = 4;
-                } else if (constraints.crossAxisExtent > 600) {
-                  crossAxisCount = 3;
-                } else {
-                  crossAxisCount = 2;
-                }
-                return SliverGrid(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    mainAxisSpacing: 24,
-                    crossAxisSpacing: 24,
-                    childAspectRatio: 0.75,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _buildServiceProviderCard(
-                      name: 'Clean Pro Services',
-                      rating: 4.8,
-                      reviews: 128,
-                      services: ['Window Cleaning', 'Facade Cleaning'],
-                      price: 'From \$150',
-                      imageUrl: 'https://picsum.photos/400/300',
-                      distance: '2.5 miles away',
-                      availability: 'Next available: Tomorrow',
-                    ),
-                    childCount: 10,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildServiceProviderCard({
-    required String name,
-    required double rating,
-    required int reviews,
-    required List<String> services,
-    required String price,
-    required String imageUrl,
-    required String distance,
-    required String availability,
-  }) {
-    return Card(
-      color: Colors.white.withOpacity(0.05),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: InkWell(
-        onTap: () {
-          // TODO: Navigate to provider details
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          children: [
-            // Image Section
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: AspectRatio(
-                aspectRatio: 4/3,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            
-            // Info Section
-            Container(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name and Rating
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.star,
-                            color: Colors.amber[400],
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            rating.toString(),
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                          
+                          // Quick Stats
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Row(
+                              children: [
+                                _buildStatCard(
+                                  icon: Icons.home_outlined,
+                                  label: 'Active Listings',
+                                  value: _activeListings.toString(),
+                                ),
+                                const SizedBox(width: 16),
+                                _buildStatCard(
+                                  icon: Icons.visibility_outlined,
+                                  label: 'Total Views',
+                                  value: _totalViews.toString(),
+                                ),
+                                const SizedBox(width: 16),
+                                _buildStatCard(
+                                  icon: Icons.person_outline,
+                                  label: 'Applications',
+                                  value: _totalApplications.toString(),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    distance,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 13,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    availability,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 13,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    price,
-                    style: const TextStyle(
-                      color: Color(0xFF3CBFAE),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ],
+                ),
               ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(48, 0, 48, 48),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 400,
+                    mainAxisSpacing: 24,
+                    crossAxisSpacing: 24,
+                    childAspectRatio: 0.8,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildPropertyCard(properties[index]),
+                    childCount: properties.length,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 32, color: Colors.white),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

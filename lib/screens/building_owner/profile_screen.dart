@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/navigation_service.dart';
+import '../../services/storage_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class BuildingOwnerProfileScreen extends StatefulWidget {
   const BuildingOwnerProfileScreen({super.key});
@@ -15,6 +18,9 @@ class _BuildingOwnerProfileScreenState extends State<BuildingOwnerProfileScreen>
   bool _isSaving = false;
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
+  final _storageService = StorageService();
+  final _imagePicker = ImagePicker();
+  String? _profileImageUrl;
   
   // Controllers for editable fields
   final _firstNameController = TextEditingController();
@@ -32,7 +38,10 @@ class _BuildingOwnerProfileScreenState extends State<BuildingOwnerProfileScreen>
 
   Future<void> _loadUserProfile() async {
     try {
+      print('Loading user profile...');
       final profile = await _authService.getUserProfile();
+      print('Profile data received: $profile');
+      
       if (profile != null) {
         setState(() {
           _firstNameController.text = profile['firstName'] ?? '';
@@ -41,12 +50,18 @@ class _BuildingOwnerProfileScreenState extends State<BuildingOwnerProfileScreen>
           _phoneController.text = profile['phone'] ?? '';
           _companyController.text = profile['companyName'] ?? '';
           _addressController.text = profile['address'] ?? '';
+          _profileImageUrl = profile['profileImageUrl'];
+          print('Profile image URL set to: $_profileImageUrl');
           _isLoading = false;
         });
+      } else {
+        print('No profile data received');
+        setState(() => _isLoading = false);
       }
     } catch (e) {
       print('Error loading profile: $e');
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to load profile. Please try again.'),
@@ -54,6 +69,74 @@ class _BuildingOwnerProfileScreenState extends State<BuildingOwnerProfileScreen>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      print('Starting image picker...');
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image == null) {
+        print('No image selected');
+        return;
+      }
+
+      print('Image picked successfully: ${image.path}');
+      setState(() => _isSaving = true);
+
+      final userId = _authService.currentUser?.uid;
+      if (userId == null) {
+        print('No user ID available');
+        throw Exception('User not authenticated');
+      }
+
+      print('Starting image upload for user: $userId');
+      final imageUrl = await _storageService.uploadProfileImage(userId, image);
+      print('Image uploaded successfully. URL: $imageUrl');
+      
+      print('Updating Firestore with new image URL');
+      await _authService.updateUserProfile({
+        'profileImageUrl': imageUrl,
+        'lastUpdated': DateTime.now().toIso8601String(),
+      });
+      print('Profile updated with new image URL');
+
+      if (!mounted) return;
+
+      setState(() {
+        _profileImageUrl = imageUrl;
+        _isSaving = false;
+      });
+      print('State updated with new image URL: $_profileImageUrl');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile picture updated successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error uploading image: $e');
+      if (e is FirebaseException) {
+        print('Firebase error code: ${e.code}');
+        print('Firebase error message: ${e.message}');
+      }
+      
+      if (!mounted) return;
+      
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update profile picture: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -156,6 +239,73 @@ class _BuildingOwnerProfileScreenState extends State<BuildingOwnerProfileScreen>
     );
   }
 
+  Widget _buildProfileImage() {
+    if (_isSaving) {
+      return Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey.shade300, width: 2),
+        ),
+        child: const ClipOval(
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.grey.shade300, width: 2),
+      ),
+      child: ClipOval(
+        child: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+            ? Image.network(
+                _profileImageUrl!,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: Colors.grey.shade800,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  print('Error loading profile image: $error');
+                  print('Stack trace: $stackTrace');
+                  return Container(
+                    color: Colors.grey.shade800,
+                    child: Icon(
+                      Icons.account_circle,
+                      size: 120,
+                      color: Colors.grey.shade400,
+                    ),
+                  );
+                },
+              )
+            : Container(
+                color: Colors.grey.shade800,
+                child: Icon(
+                  Icons.account_circle,
+                  size: 120,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -184,6 +334,40 @@ class _BuildingOwnerProfileScreenState extends State<BuildingOwnerProfileScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Profile Image Section
+                  Center(
+                    child: Stack(
+                      children: [
+                        _buildProfileImage(),
+                        if (_isEditing)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              height: 40,
+                              width: 40,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.background,
+                                  width: 3,
+                                ),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: _isSaving ? null : _pickAndUploadImage,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
                   Text(
                     'Profile',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(

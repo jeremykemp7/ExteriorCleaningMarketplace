@@ -1,10 +1,114 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'auth/building_owner_login.dart';
 import 'auth/licensed_cleaner_login.dart';
 import '../theme.dart';
+import '../services/storage_service.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
+
+  Widget _buildLogo(BuildContext context) {
+    final storageService = StorageService();
+    return FutureBuilder<String>(
+      future: storageService.getDesignAssetUrl('lucid-bots-logo.png'),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          print('Loading logo URL...');
+          return const SizedBox(
+            height: 60,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          print('Error loading logo URL: ${snapshot.error}');
+          print('Error type: ${snapshot.error.runtimeType}');
+          if (snapshot.error is FirebaseException) {
+            final error = snapshot.error as FirebaseException;
+            print('Firebase error code: ${error.code}');
+            print('Firebase error message: ${error.message}');
+            print('Firebase error stack: ${error.stackTrace}');
+            print('Firebase error plugin: ${error.plugin}');
+          }
+          // Try to get more details about the error
+          print('Full error stack trace: ${snapshot.stackTrace}');
+          
+          return const SizedBox(
+            height: 60,
+            child: Center(
+              child: Text(
+                'LUCID BOTS',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasData) {
+          final imageUrl = snapshot.data!;
+          print('Attempting to load image from URL: $imageUrl');
+          return SizedBox(
+            height: 60,
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.contain,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) {
+                  print('Image loaded successfully');
+                  return child;
+                }
+                final progress = loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                    : null;
+                print('Loading progress: ${(progress ?? 0) * 100}%');
+                return Center(
+                  child: CircularProgressIndicator(
+                    value: progress,
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                print('Image.network error: $error');
+                print('Image.network error type: ${error.runtimeType}');
+                print('Image.network stack trace: $stackTrace');
+                return const Center(
+                  child: Text(
+                    'LUCID BOTS',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }
+
+        print('No URL data received');
+        return const SizedBox(
+          height: 60,
+          child: Center(
+            child: Text(
+              'LUCID BOTS',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   void _navigateWithTransition(BuildContext context, Widget screen) {
     Navigator.of(context).push(
@@ -40,7 +144,6 @@ class WelcomeScreen extends StatelessWidget {
         child: SafeArea(
           child: Row(
             children: [
-              // Main Content
               Expanded(
                 child: Column(
                   children: [
@@ -50,44 +153,17 @@ class WelcomeScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Column(
                             children: [
-                              // App Bar
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      height: 32,
-                                      width: 32,
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.secondaryColor,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Icon(
-                                        Icons.hexagon_outlined,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'LUCID BOTS',
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        color: Colors.white,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                padding: const EdgeInsets.only(top: 40, bottom: 40),
+                                child: Center(child: _buildLogo(context)),
                               ),
-                              const SizedBox(height: 40),
-
-                              // Hero Text
                               Text(
                                 'Welcome to the\nExterior Cleaning Marketplace',
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                                   color: Colors.white,
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -96,12 +172,10 @@ class WelcomeScreen extends StatelessWidget {
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                   color: Colors.white.withOpacity(0.8),
-                                  fontWeight: FontWeight.normal,
+                                  fontSize: 20,
                                 ),
                               ),
                               const SizedBox(height: 60),
-                              
-                              // User Type Selection
                               Container(
                                 constraints: const BoxConstraints(maxWidth: 600),
                                 child: Column(
@@ -147,12 +221,13 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Trademark Text at bottom
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
                         '© 2025 Lucid Bots. All rights reserved.',
-                        style: Theme.of(context).textTheme.labelSmall,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white.withOpacity(0.7),
+                        ),
                       ),
                     ),
                   ],

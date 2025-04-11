@@ -8,13 +8,28 @@ import 'screens/building_owner/home_screen.dart';
 import 'screens/cleaner/home_screen.dart';
 import 'services/navigation_service.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'theme.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } else {
+    await Firebase.initializeApp();
+  }
+  
+  // Initialize Google Fonts
+  GoogleFonts.config.allowRuntimeFetching = true;
+  
   runApp(const MyApp());
 }
 
@@ -27,32 +42,7 @@ class MyApp extends StatelessWidget {
       navigatorKey: NavigationService.navigatorKey,
       title: 'Lucid Bots Marketplace',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.dark(
-          primary: const Color(0xFF3CBFAE),
-          secondary: const Color(0xFFFFD700),
-          surface: const Color(0xFF1A1A1A),
-          background: const Color(0xFF0A192F),
-        ),
-        scaffoldBackgroundColor: const Color(0xFF0A192F),
-        textTheme: const TextTheme(
-          headlineLarge: TextStyle(
-            fontSize: 40,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            color: Colors.white,
-          ),
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.themeData,
       home: const WelcomeScreen(),
       routes: {
         '/login/building-owner': (context) => const BuildingOwnerLoginScreen(),

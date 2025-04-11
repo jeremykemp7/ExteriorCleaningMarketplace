@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/navigation_service.dart';
+import '../../services/storage_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class CleanerProfileScreen extends StatefulWidget {
   const CleanerProfileScreen({super.key});
@@ -15,6 +19,9 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
   bool _isSaving = false;
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
+  final _storageService = StorageService();
+  final _imagePicker = ImagePicker();
+  String? _profileImageUrl;
   
   // Controllers for editable fields
   final _firstNameController = TextEditingController();
@@ -43,6 +50,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
           _licenseController.text = profile['licenseNumber'] ?? '';
           _experienceController.text = profile['yearsOfExperience']?.toString() ?? '';
           _serviceAreasController.text = profile['serviceAreas'] ?? '';
+          _profileImageUrl = profile['profileImageUrl'];
           _isLoading = false;
         });
       }
@@ -112,6 +120,56 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to sign out. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      setState(() => _isSaving = true);
+
+      final userId = _authService.currentUser?.uid;
+      if (userId == null) throw Exception('User not authenticated');
+
+      final imageUrl = await _storageService.uploadProfileImage(userId, image);
+      
+      // Update Firestore with the new image URL
+      await _authService.updateUserProfile({
+        'profileImageUrl': imageUrl,
+      });
+
+      setState(() {
+        _profileImageUrl = imageUrl;
+        _isSaving = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+      setState(() => _isSaving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update profile picture. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -199,6 +257,82 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Profile Image Section
+                  Center(
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 3,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: _profileImageUrl != null
+                                ? Image.network(
+                                    _profileImageUrl!,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        color: Colors.white.withOpacity(0.1),
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                    loadingProgress.expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print('Error loading profile image: $error');
+                                      return Container(
+                                        color: Colors.white.withOpacity(0.1),
+                                        child: const Icon(Icons.person, size: 60),
+                                      );
+                                    },
+                                  )
+                                : Container(
+                                    color: Colors.white.withOpacity(0.1),
+                                    child: const Icon(Icons.person, size: 60),
+                                  ),
+                          ),
+                        ),
+                        if (_isEditing)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              height: 40,
+                              width: 40,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.background,
+                                  width: 3,
+                                ),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: _isSaving ? null : _pickAndUploadImage,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
                   Text(
                     'Profile',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(

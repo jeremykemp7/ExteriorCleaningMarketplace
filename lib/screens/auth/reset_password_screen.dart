@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../services/navigation_service.dart';
+import '../../widgets/password_field.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -180,57 +181,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
                             ),
+                            prefixIcon: const Icon(Icons.pin_outlined),
                           ),
                           style: TextStyle(color: Colors.white),
                           validator: _validateCode,
                           keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        PasswordField(
                           controller: _passwordController,
-                          decoration: InputDecoration(
-                            labelText: 'New Password',
-                            labelStyle: TextStyle(color: Colors.white70),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.white30),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                color: Colors.white70,
-                              ),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                            ),
-                          ),
-                          style: TextStyle(color: Colors.white),
-                          obscureText: _obscurePassword,
+                          label: 'New Password',
+                          enabled: !_isLoading,
                           validator: _validatePassword,
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        PasswordField(
                           controller: _confirmPasswordController,
-                          decoration: InputDecoration(
-                            labelText: 'Confirm New Password',
-                            labelStyle: TextStyle(color: Colors.white70),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.white30),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                                color: Colors.white70,
-                              ),
-                              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                            ),
-                          ),
-                          style: TextStyle(color: Colors.white),
-                          obscureText: _obscureConfirmPassword,
+                          label: 'Confirm New Password',
+                          enabled: !_isLoading,
                           validator: (value) {
                             if (value != _passwordController.text) {
                               return 'Passwords do not match';

@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Brand Colors
-  static const Color primaryColor = Color(0xFF142933); // Dark Blue
-  static const Color secondaryColor = Color(0xFF23C0D8); // Cyan
-  static const Color accentColor = Color(0xFFFFD700); // Yellow
-  static const Color backgroundColor = Color(0xFFF5F5F5); // Light Grey
-  static const Color textColor = Color(0xFF43545C); // Dark Grey for text
-  static const Color surfaceColor = Color(0xFFFFFFFF); // White for cards
+  static const Color primaryColor = Color(0xFF142933);    // Dark Blue
+  static const Color secondaryColor = Color(0xFF23C0D8);  // Cyan
+  static const Color accentColor = Color(0xFFFFD700);     // Yellow
+  static const Color backgroundColor = Color(0xFF0A192F); // Dark background
+  static const Color surfaceColor = Color(0xFF1A1A1A);    // Surface color
+  static const Color textColor = Colors.white;            // Text color
+
+  // Opacity levels for consistent transparency
+  static const double kHighEmphasis = 1.0;
+  static const double kMediumEmphasis = 0.8;
+  static const double kLowEmphasis = 0.6;
+  static const double kUltraLowEmphasis = 0.4;
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
@@ -33,68 +40,69 @@ class AppTheme {
     borderRadius: BorderRadius.circular(12),
   );
 
-  // Text Styles
-  static const String primaryFontFamily = 'Oswald';
-  static const String bodyFontFamily = 'Roboto';
-
+  // Text Styles with Google Fonts
   static final TextTheme textTheme = TextTheme(
     // Display styles
-    displayLarge: TextStyle(
-      fontFamily: primaryFontFamily,
+    displayLarge: GoogleFonts.oswald(
+      fontSize: 40,
+      fontWeight: FontWeight.bold,
+      color: textColor,
+      letterSpacing: -0.5,
+      height: 1.2,
+    ),
+    displayMedium: GoogleFonts.oswald(
       fontSize: 32,
       fontWeight: FontWeight.bold,
-      color: primaryColor,
-      letterSpacing: -0.5,
-    ),
-    displayMedium: TextStyle(
-      fontFamily: primaryFontFamily,
-      fontSize: 28,
-      fontWeight: FontWeight.bold,
-      color: primaryColor,
+      color: textColor,
+      height: 1.2,
     ),
     
     // Headline styles
-    headlineLarge: TextStyle(
-      fontFamily: primaryFontFamily,
-      fontSize: 24,
-      fontWeight: FontWeight.bold,
-      color: primaryColor,
-    ),
-    headlineMedium: TextStyle(
-      fontFamily: primaryFontFamily,
-      fontSize: 20,
+    headlineLarge: GoogleFonts.oswald(
+      fontSize: 28,
       fontWeight: FontWeight.bold,
       color: textColor,
+      height: 1.3,
+    ),
+    headlineMedium: GoogleFonts.oswald(
+      fontSize: 24,
+      fontWeight: FontWeight.bold,
+      color: textColor,
+      height: 1.3,
     ),
     
     // Title styles
-    titleLarge: TextStyle(
-      fontFamily: primaryFontFamily,
-      fontSize: 18,
+    titleLarge: GoogleFonts.roboto(
+      fontSize: 20,
       fontWeight: FontWeight.w600,
       color: textColor,
+      height: 1.4,
     ),
-    
-    // Body styles
-    bodyLarge: TextStyle(
-      fontFamily: bodyFontFamily,
-      fontSize: 16,
-      color: textColor,
-      height: 1.5,
-    ),
-    bodyMedium: TextStyle(
-      fontFamily: bodyFontFamily,
-      fontSize: 14,
+    titleMedium: GoogleFonts.roboto(
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
       color: textColor,
       height: 1.4,
     ),
     
+    // Body styles
+    bodyLarge: GoogleFonts.roboto(
+      fontSize: 16,
+      color: textColor,
+      height: 1.5,
+    ),
+    bodyMedium: GoogleFonts.roboto(
+      fontSize: 14,
+      color: textColor,
+      height: 1.5,
+    ),
+    
     // Label styles
-    labelLarge: TextStyle(
-      fontFamily: bodyFontFamily,
+    labelLarge: GoogleFonts.roboto(
       fontSize: 14,
       fontWeight: FontWeight.w500,
       color: textColor,
+      letterSpacing: 0.5,
     ),
   );
 
@@ -106,54 +114,73 @@ class AppTheme {
     textTheme: textTheme,
     
     // Color Scheme
-    colorScheme: ColorScheme.light(
-      primary: primaryColor,
-      secondary: secondaryColor,
-      tertiary: accentColor,
-      background: backgroundColor,
+    colorScheme: ColorScheme.dark(
+      primary: secondaryColor,
+      secondary: accentColor,
       surface: surfaceColor,
+      background: backgroundColor,
       onPrimary: Colors.white,
-      onSecondary: primaryColor,
-      onBackground: textColor,
-      onSurface: textColor,
+      onSecondary: Colors.black,
+      onBackground: Colors.white,
+      onSurface: Colors.white,
+      error: Colors.red.shade300,
     ),
 
     // AppBar Theme
     appBarTheme: AppBarTheme(
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
+      foregroundColor: textColor,
       elevation: 0,
+      centerTitle: false,
       titleTextStyle: textTheme.titleLarge?.copyWith(
-        color: Colors.white,
+        color: textColor,
         fontWeight: FontWeight.bold,
+        letterSpacing: 1.2,
       ),
     ),
 
     // Card Theme
     cardTheme: CardTheme(
       color: surfaceColor,
-      elevation: 2,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.white.withOpacity(0.1)),
       ),
     ),
 
     // Button Themes
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
+        backgroundColor: secondaryColor,
         foregroundColor: Colors.white,
-        textStyle: TextStyle(
-          fontFamily: primaryFontFamily,
+        textStyle: GoogleFonts.roboto(
           fontSize: 16,
           fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
         ),
         padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 12,
+          horizontal: 24,
+          vertical: 16,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 0,
+      ),
+    ),
+
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: secondaryColor,
+        textStyle: GoogleFonts.roboto(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
       ),
     ),
@@ -161,27 +188,80 @@ class AppTheme {
     // Input Decoration
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: surfaceColor,
+      fillColor: Colors.white.withOpacity(0.05),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 16,
+      ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: primaryColor.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: primaryColor.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: secondaryColor),
       ),
-      labelStyle: TextStyle(color: textColor.withOpacity(0.7)),
-      hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.red.shade300),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.red.shade300),
+      ),
+      labelStyle: TextStyle(
+        color: Colors.white.withOpacity(kMediumEmphasis),
+        fontSize: 16,
+      ),
+      hintStyle: TextStyle(
+        color: Colors.white.withOpacity(kLowEmphasis),
+        fontSize: 16,
+      ),
+      prefixIconColor: Colors.white.withOpacity(kMediumEmphasis),
+      suffixIconColor: Colors.white.withOpacity(kMediumEmphasis),
     ),
 
     // Icon Theme
     iconTheme: IconThemeData(
-      color: primaryColor,
+      color: Colors.white.withOpacity(kHighEmphasis),
       size: 24,
+    ),
+
+    // Dialog Theme
+    dialogTheme: DialogTheme(
+      backgroundColor: surfaceColor,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.white.withOpacity(0.1)),
+      ),
+      titleTextStyle: textTheme.titleLarge?.copyWith(color: textColor),
+      contentTextStyle: textTheme.bodyLarge?.copyWith(color: textColor.withOpacity(kMediumEmphasis)),
+    ),
+
+    // Chip Theme
+    chipTheme: ChipThemeData(
+      backgroundColor: Colors.white.withOpacity(0.1),
+      selectedColor: secondaryColor,
+      disabledColor: Colors.white.withOpacity(0.05),
+      labelStyle: TextStyle(
+        color: Colors.white.withOpacity(kHighEmphasis),
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
+      secondaryLabelStyle: TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
     ),
   );
 }

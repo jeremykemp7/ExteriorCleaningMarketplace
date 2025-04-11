@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/navigation_service.dart';
+import '../../widgets/password_field.dart';
 import 'login_screen.dart';
 import '../building_owner/home_screen.dart';
 import 'reset_password_screen.dart';
@@ -168,6 +169,7 @@ class _BuildingOwnerLoginScreenState extends State<BuildingOwnerLoginScreen> {
                           decoration: const InputDecoration(
                             labelText: 'Email',
                             border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.email_outlined),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
@@ -181,13 +183,10 @@ class _BuildingOwnerLoginScreenState extends State<BuildingOwnerLoginScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        PasswordField(
                           controller: _passwordController,
-                          decoration: const InputDecoration(
-                            labelText: 'Password',
-                            border: OutlineInputBorder(),
-                          ),
-                          obscureText: true,
+                          label: 'Password',
+                          enabled: !_isLoading,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your password';
@@ -219,10 +218,104 @@ class _BuildingOwnerLoginScreenState extends State<BuildingOwnerLoginScreen> {
                     onPressed: () => NavigationService.pushNamed('/register/building-owner'),
                     child: const Text('Don\'t have an account? Sign up'),
                   ),
+                  TextButton(
+                    onPressed: _isLoading ? null : () => _showForgotPasswordDialog(context),
+                    child: const Text('Forgot Password?'),
+                  ),
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showForgotPasswordDialog(BuildContext context) async {
+    final emailController = TextEditingController();
+    bool isLoading = false;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Reset Password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Enter your email address and we\'ll send you a link to reset your password.',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+                keyboardType: TextInputType.emailAddress,
+                enabled: !isLoading,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (emailController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter your email address'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setState(() => isLoading = true);
+
+                      try {
+                        await _authService.resetPassword(emailController.text.trim());
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Password reset link sent! Check your email.',
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(e.toString()),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      } finally {
+                        if (mounted) {
+                          setState(() => isLoading = false);
+                        }
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Send Reset Link'),
+            ),
+          ],
         ),
       ),
     );

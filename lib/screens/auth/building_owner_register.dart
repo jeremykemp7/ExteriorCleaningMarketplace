@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/navigation_service.dart';
+import '../../widgets/password_field.dart';
 
 class BuildingOwnerRegisterScreen extends StatefulWidget {
   const BuildingOwnerRegisterScreen({super.key});
@@ -158,6 +159,7 @@ class _BuildingOwnerRegisterScreenState extends State<BuildingOwnerRegisterScree
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email_outlined),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
@@ -171,13 +173,10 @@ class _BuildingOwnerRegisterScreenState extends State<BuildingOwnerRegisterScree
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              PasswordField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
+                label: 'Password',
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a password';
@@ -189,13 +188,10 @@ class _BuildingOwnerRegisterScreenState extends State<BuildingOwnerRegisterScree
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              PasswordField(
                 controller: _confirmPasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
+                label: 'Confirm Password',
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please confirm your password';

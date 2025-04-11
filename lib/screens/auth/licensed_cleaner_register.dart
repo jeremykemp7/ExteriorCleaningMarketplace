@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/navigation_service.dart';
+import '../../widgets/password_field.dart';
 
 class LicensedCleanerRegisterScreen extends StatefulWidget {
   const LicensedCleanerRegisterScreen({super.key});
@@ -182,6 +183,7 @@ class _LicensedCleanerRegisterScreenState extends State<LicensedCleanerRegisterS
                 decoration: const InputDecoration(
                   labelText: 'License Number',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.badge_outlined),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -191,13 +193,10 @@ class _LicensedCleanerRegisterScreenState extends State<LicensedCleanerRegisterS
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              PasswordField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
+                label: 'Password',
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a password';
@@ -209,13 +208,10 @@ class _LicensedCleanerRegisterScreenState extends State<LicensedCleanerRegisterS
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              PasswordField(
                 controller: _confirmPasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
+                label: 'Confirm Password',
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please confirm your password';

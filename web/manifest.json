@@ -1,11 +1,11 @@
 {
-    "name": "exterior_marketplace",
-    "short_name": "exterior_marketplace",
+    "name": "Exterior Cleaning Marketplace",
+    "short_name": "Exterior Cleaning",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
+    "background_color": "#ffffff",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Connect with exterior cleaning professionals",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

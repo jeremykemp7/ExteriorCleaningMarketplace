@@ -7,6 +7,9 @@ import '../../services/navigation_service.dart';
 import '../../services/auth_service.dart';
 import '../welcome_screen.dart';
 import 'add_property_screen.dart';
+import 'property_bids_screen.dart';
+import '../../widgets/app_logo.dart';
+import 'market_research_screen.dart';
 
 class BuildingOwnerHomeScreen extends StatefulWidget {
   const BuildingOwnerHomeScreen({super.key});
@@ -195,21 +198,23 @@ class _BuildingOwnerHomeScreenState extends State<BuildingOwnerHomeScreen> {
 
     return Card(
       elevation: 4,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Image Section
           Stack(
             children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              SizedBox(
+                height: 160,
+                width: double.infinity,
                 child: Image.network(
                   imageUrl,
-                  height: 200,
-                  width: double.infinity,
                   fit: BoxFit.cover,
                 ),
               ),
+              // Status Tag
               Positioned(
                 top: 12,
                 right: 12,
@@ -220,94 +225,241 @@ class _BuildingOwnerHomeScreenState extends State<BuildingOwnerHomeScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    status,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  address,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  '\$${price.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.visibility_outlined, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Text('$views views'),
-                    const SizedBox(width: 16),
-                    Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Text('$applications applications'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          ButtonBar(
-            alignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: () {
-                  _showDeleteConfirmation(document.id, name);
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
-                ),
-                child: const Text('Delete'),
-              ),
-              TextButton(
-                onPressed: () {
-                  // TODO: Implement edit property
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AddPropertyScreen(
-                        propertyId: document.id,
-                        initialData: data,
-                      ),
+                    status.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
-                  );
-                },
-                child: const Text('Edit'),
+                  ),
+                ),
               ),
-              TextButton(
-                onPressed: () {
-                  // TODO: Implement view applications screen
-                },
-                child: Text('Applications ($applications)'),
+              // Price Tag
+              Positioned(
+                bottom: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '\$${price.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
               ),
             ],
+          ),
+          // Content Section
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Property Name and Address
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    address,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 16),
+                  // Stats Row
+                  Row(
+                    children: [
+                      Expanded(child: _buildStatItem(Icons.visibility_outlined, views.toString(), 'views')),
+                      Expanded(child: _buildStatItem(Icons.person_outline, applications.toString(), 'applications')),
+                    ],
+                  ),
+                  const Spacer(),
+                  // Bids Section
+                  StreamBuilder<QuerySnapshot>(
+                    stream: _firestore
+                        .collection('bids')
+                        .where('propertyId', isEqualTo: document.id)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      final bidCount = snapshot.data?.docs.length ?? 0;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: Colors.grey[200]!),
+                            bottom: BorderSide(color: Colors.grey[200]!),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.gavel_outlined, size: 16, color: Colors.grey[600]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$bidCount ${bidCount == 1 ? 'bid' : 'bids'}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            TextButton(
+                              onPressed: () => PropertyBidsScreen.navigate(
+                                document.id,
+                                data['name'] as String,
+                              ),
+                              style: TextButton.styleFrom(
+                                minimumSize: Size.zero,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              child: const Text('View All'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  // Action Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildActionButton(
+                        icon: Icons.delete_outline,
+                        label: 'Delete',
+                        color: Colors.red,
+                        onPressed: () => _showDeleteConfirmation(document.id, name),
+                      ),
+                      _buildActionButton(
+                        icon: Icons.edit_outlined,
+                        label: 'Edit',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddPropertyScreen(
+                                propertyId: document.id,
+                                initialData: data,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildActionButton(
+                        icon: Icons.person_outline,
+                        label: 'Applications',
+                        onPressed: () {
+                          // TODO: Implement view applications screen
+                        },
+                        badge: applications.toString(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    Color? color,
+    String? badge,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(icon, size: 20, color: color ?? Colors.grey[700]),
+                if (badge != null)
+                  Positioned(
+                    top: -8,
+                    right: -8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        badge,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: color ?? Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, String value, String label) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
     );
   }
 
@@ -318,38 +470,54 @@ class _BuildingOwnerHomeScreenState extends State<BuildingOwnerHomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              height: 32,
-              width: 32,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondary,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(
-                Icons.hexagon_outlined,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'LUCID BOTS',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ],
-        ),
+        title: const AppLogo(),
         actions: [
           IconButton(
             icon: const Icon(Icons.analytics_outlined),
             onPressed: () {
-              // TODO: Navigate to market research screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MarketResearchScreen(),
+                ),
+              );
             },
             tooltip: 'Market Research',
+          ),
+          IconButton(
+            icon: StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('chats')
+                  .where('participants', arrayContains: _authService.currentUser!.uid)
+                  .where('unreadCount', isGreaterThan: 0)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final hasUnread = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+                return Stack(
+                  children: [
+                    const Icon(Icons.message_outlined),
+                    if (hasUnread)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 8,
+                            minHeight: 8,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+            onPressed: () => Navigator.pushNamed(context, '/messages'),
+            tooltip: 'Messages',
           ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
@@ -501,7 +669,7 @@ class _BuildingOwnerHomeScreenState extends State<BuildingOwnerHomeScreen> {
                     maxCrossAxisExtent: 400,
                     mainAxisSpacing: 24,
                     crossAxisSpacing: 24,
-                    childAspectRatio: 0.8,
+                    childAspectRatio: 0.75,
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _buildPropertyCard(properties[index]),

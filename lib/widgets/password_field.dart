@@ -4,53 +4,65 @@ import '../theme.dart';
 class PasswordField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
-  final String? Function(String?)? validator;
   final bool enabled;
-  final VoidCallback? onEditingComplete;
-  final FocusNode? focusNode;
+  final String? Function(String?)? validator;
+  final TextStyle? style;
+  final TextStyle? labelStyle;
+  final Color? iconColor;
+  final Color? fillColor;
 
   const PasswordField({
-    super.key,
+    Key? key,
     required this.controller,
     required this.label,
-    this.validator,
     this.enabled = true,
-    this.onEditingComplete,
-    this.focusNode,
-  });
+    this.validator,
+    this.style,
+    this.labelStyle,
+    this.iconColor,
+    this.fillColor,
+  }) : super(key: key);
 
   @override
   State<PasswordField> createState() => _PasswordFieldState();
 }
 
 class _PasswordFieldState extends State<PasswordField> {
-  bool _obscurePassword = true;
+  bool _obscureText = true;
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: widget.controller,
-      obscureText: _obscurePassword,
       enabled: widget.enabled,
-      focusNode: widget.focusNode,
-      onEditingComplete: widget.onEditingComplete,
-      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-        color: Colors.white,
-      ),
+      obscureText: _obscureText,
+      style: widget.style,
       decoration: InputDecoration(
         labelText: widget.label,
-        labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          color: Colors.white.withOpacity(AppTheme.kMediumEmphasis),
+        labelStyle: widget.labelStyle,
+        border: const OutlineInputBorder(
+          borderSide: BorderSide.none,
         ),
-        prefixIcon: const Icon(Icons.lock_outline),
+        enabledBorder: const OutlineInputBorder(
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderSide: BorderSide.none,
+        ),
+        filled: true,
+        fillColor: widget.fillColor ?? Colors.white.withOpacity(0.05),
+        prefixIcon: Icon(
+          Icons.lock_outline,
+          color: widget.iconColor,
+        ),
         suffixIcon: IconButton(
           icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: Colors.white.withOpacity(AppTheme.kMediumEmphasis),
+            _obscureText ? Icons.visibility_off : Icons.visibility,
+            color: widget.iconColor,
           ),
           onPressed: () {
             setState(() {
-              _obscurePassword = !_obscurePassword;
+              _obscureText = !_obscureText;
             });
           },
         ),

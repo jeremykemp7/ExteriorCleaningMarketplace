@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/navigation_service.dart';
 import '../../widgets/password_field.dart';
-import 'login_screen.dart';
+import '../../theme.dart';
 import '../building_owner/home_screen.dart';
 import 'reset_password_screen.dart';
 
@@ -194,6 +194,49 @@ class _BuildingOwnerLoginScreenState extends State<BuildingOwnerLoginScreen> {
                             return null;
                           },
                         ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () async {
+                            final email = _emailController.text.trim();
+                            if (email.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please enter your email address first'),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                              return;
+                            }
+                            try {
+                              await _authService.resetPassword(email);
+                              if (!mounted) return;
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ResetPasswordScreen(
+                                    email: email,
+                                    userType: 'building_owner',
+                                  ),
+                                ),
+                              );
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: ${e.toString()}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            'Forgot Password?',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -218,104 +261,10 @@ class _BuildingOwnerLoginScreenState extends State<BuildingOwnerLoginScreen> {
                     onPressed: () => NavigationService.pushNamed('/register/building-owner'),
                     child: const Text('Don\'t have an account? Sign up'),
                   ),
-                  TextButton(
-                    onPressed: _isLoading ? null : () => _showForgotPasswordDialog(context),
-                    child: const Text('Forgot Password?'),
-                  ),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showForgotPasswordDialog(BuildContext context) async {
-    final emailController = TextEditingController();
-    bool isLoading = false;
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Reset Password'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Enter your email address and we\'ll send you a link to reset your password.',
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                enabled: !isLoading,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      if (emailController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter your email address'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      setState(() => isLoading = true);
-
-                      try {
-                        await _authService.resetPassword(emailController.text.trim());
-                        if (!mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Password reset link sent! Check your email.',
-                            ),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(e.toString()),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      } finally {
-                        if (mounted) {
-                          setState(() => isLoading = false);
-                        }
-                      }
-                    },
-              child: isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Send Reset Link'),
-            ),
-          ],
         ),
       ),
     );
@@ -326,49 +275,5 @@ class _BuildingOwnerLoginScreenState extends State<BuildingOwnerLoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-}
-
-class _ResetPasswordDialog extends StatelessWidget {
-  final _emailController = TextEditingController();
-
-  _ResetPasswordDialog({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      title: Text('Reset Password', style: TextStyle(color: Colors.white)),
-      content: TextField(
-        controller: _emailController,
-        decoration: InputDecoration(
-          labelText: 'Email',
-          labelStyle: TextStyle(color: Colors.white70),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.white30),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-          ),
-        ),
-        style: TextStyle(color: Colors.white),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: TextStyle(color: Colors.white70)),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, _emailController.text),
-          child: Text(
-            'Send',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 } 

@@ -6,6 +6,7 @@ import 'screens/auth/building_owner_register.dart';
 import 'screens/auth/licensed_cleaner_register.dart';
 import 'screens/building_owner/home_screen.dart';
 import 'screens/cleaner/home_screen.dart';
+import 'screens/chat/chat_list_screen.dart';
 import 'services/navigation_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -15,6 +16,8 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'theme.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +32,9 @@ void main() async {
   
   // Initialize Google Fonts
   GoogleFonts.config.allowRuntimeFetching = true;
+
+  // Initialize notifications
+  await NotificationService().initialize();
   
   runApp(const MyApp());
 }
@@ -51,6 +57,7 @@ class MyApp extends StatelessWidget {
         '/register/cleaner': (context) => const LicensedCleanerRegisterScreen(),
         '/building-owner/home': (context) => const BuildingOwnerHomeScreen(),
         '/cleaner/home': (context) => const CleanerHomeScreen(),
+        '/messages': (context) => const ChatListScreen(),
       },
     );
   }

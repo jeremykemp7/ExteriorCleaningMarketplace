@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/navigation_service.dart';
 
 class AddPropertyScreen extends StatefulWidget {
   final String? propertyId;
@@ -118,6 +120,14 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     }
   }
 
+  Future<String> _getUserName(String userId) async {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    return userDoc.data()?['name'] ?? 'Unknown Owner';
+  }
+
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedImages.isEmpty && _existingImageUrls.isEmpty) {
@@ -136,18 +146,24 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       final userId = _authService.currentUser?.uid;
       if (userId == null) throw Exception('User not authenticated');
 
+      final ownerProfile = await _firestore.collection('users').doc(userId).get();
+      final ownerData = ownerProfile.data() as Map<String, dynamic>;
+      final firstName = ownerData['firstName'] as String? ?? 'Unknown';
+      final lastName = ownerData['lastName'] as String? ?? '';
+      final ownerName = '$firstName $lastName'.trim();
+      
       // Upload new images and get URLs
       List<String> newImageUrls = [];
-      for (var image in _selectedImages) {
-        final imageUrl = await _storageService.uploadPropertyImage(userId, image);
-        newImageUrls.add(imageUrl);
+      if (_selectedImages.isNotEmpty) {
+        newImageUrls = await Future.wait(
+          _selectedImages.map((image) => _storageService.uploadPropertyImage(userId, image)),
+        );
       }
-
-      // Combine existing and new image URLs
       final allImageUrls = [..._existingImageUrls, ...newImageUrls];
 
       final propertyData = {
         'ownerId': userId,
+        'ownerName': ownerName,
         'name': _nameController.text.trim(),
         'address': _addressController.text.trim(),
         'city': _cityController.text.trim(),
@@ -167,11 +183,16 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
       if (widget.propertyId != null) {
         // Update existing property
-        await _firestore.collection('properties').doc(widget.propertyId).update(propertyData);
+        await _firestore.collection('properties').doc(widget.propertyId).update({
+          ...propertyData,
+          'createdAt': widget.initialData!['createdAt'], // Preserve original creation date
+        });
       } else {
         // Create new property
-        propertyData['createdAt'] = FieldValue.serverTimestamp();
-        await _firestore.collection('properties').add(propertyData);
+        await _firestore.collection('properties').add({
+          ...propertyData,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
       }
 
       if (!mounted) return;
